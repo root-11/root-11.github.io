@@ -1,4 +1,4 @@
-<html><head><style type="text/css">body {
+body {
   font-family: Monospace, /* Linux = DejaVu Sans Mono */
                Courier;   /* MacOSX & Windows = Courier */
   font-size: 16;
@@ -88,19 +88,4 @@ blockquote div {
 text-transform: none;
 text-align: right;
 width: 100%;
-}</style><title>BJORN MADSEN'S WEBSITE</title></head><body><br>
-<center>
-
-<div style="display: inline-block; vertical-align:middle;">
-
-    <a href="index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a><hr/><div style="text-align: justify;display: inline-block; width: 100%;">
-    <a class="title" href="about.html">ABOUT</a> &nbsp;
-    <a class="title" href="contact.html">EMAIL</a> &nbsp;
-    <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
-</div>
-</div>
-</center>
-    <br>
-    <br>
-    <div style="margin-bottom: 3ch;text-transform: none;">
-</div><div style="margin-bottom: 3ch;text-transform: none;">2020-05-09</div><div class="heading">BJORN MADSEN'S WEBSITE</div><hr/>This is my personal website, where you can find code and solutions to problems I've discovered.<br/>-------------<br/></body></html>
+}
