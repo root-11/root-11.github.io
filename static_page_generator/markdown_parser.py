@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from markdown import markdown
 
 parent = Path(__file__).parent
 
@@ -38,25 +39,9 @@ def markdown_to_html(text, title):
     html_ = "<html>{head}{body}</html>"
     body_ = "<body>{}</body>"
 
-    style_catalogue = {
-        '\n\n': ("<br>", "<br/>"),  # break
-        # --- straight line
-        # **bold**
-        # _underline_
-        # *italic*
-        # ALLCAPS = headline.
-        # [text](url)  = hyperlink / href
-        # ![image](url) = image.
-        # [1] = foot note
-        # - list item
-        # 1. numerical item
-
-    }
-
     doc = text
-    doc = doc.replace('\n\n', "<br/>")
     doc = common_markdown_items(doc)
-    doc = list_of_items(doc)
+    doc = markdown(doc)
 
     now = datetime.now().date()
     date_of_publication = f"""<div style="margin-bottom: 3ch;text-transform: none;">{now}</div><div class="heading">{title}</div><hr/>"""
@@ -68,10 +53,10 @@ def common_markdown_items(text):
     new_text = []
     for line in text.split('\n'):
         if set(line) == set('-'):
-            new_text.append("<hr>")
+            new_text.append("<hr/>")
 
         elif line.startswith('#'):  # it's a heading.
-            t = f"""<div class="heading">{line}</div><hr/><p style="text-align: left;">"""
+            t = f"""<div class="heading">{line}</div><hr/>"""
             new_text.append(t)
 
         elif "[" in line:
@@ -83,6 +68,33 @@ def common_markdown_items(text):
     return "\n".join(new_text)
 
 
+def paragraphs(text):
+    NL = '\n\n'
+    start_ix = 0
+    outside_paragraph = True
+    inside_paragraph = False
+    sop, eop = '<p style="text-align: left;">', '</p>'
+
+    while True:
+        if outside_paragraph:
+            text.replace(NL, sop, 1)
+            outside_paragraph = False
+            inside_paragraph = True
+            continue
+
+        if inside_paragraph:
+            if text.count(NL) % 2 == 1:
+                text.replace(NL, eop+sop, 1)
+            else:
+                text.replace(NL, eop, 1)
+                outside_paragraph = True
+                inside_paragraph = False
+            continue
+
+    if outside_paragraph:
+        text += '</p>'
+
+
 def replace_urls(line):
     a, b, c = line.count('['), line.count(']('), line.count(')')
     if b <= a and c <= a:
@@ -92,45 +104,10 @@ def replace_urls(line):
             b = line.find('](', a)
             c = line.find(')', b)
             if a < b < c:
-                md_url, text, url = line[a:c], line[a:b], line[b + 2:c]
+                md_url, text, url = line[a:c + 1], line[a + 1:b], line[b + 2:c]
                 html = f'<a href="{url}">{text}</a>'
-                line.replace(md_url, html)
+                line = line.replace(md_url, html)
                 start_ix = c + 1
     return line
 
 
-def list_of_items(text):
-    """
-    turns:
-        - Coffee
-        - Tea
-        - Mile
-    into:
-        <ul>
-            <li>Coffee</li>
-            <li>Tea</li>
-            <li>Milk</li>
-        </ul>
-
-    :param text:
-    :return:
-    """
-    assert isinstance(text, str)
-    new_text = []
-    started = False
-    for line in text.split('\n'):
-        if line.startswith('- '):
-            if not started:
-                started = True
-                new_text.append("<ul>")
-
-            new_text.append(f"<li>{line[2:]}</li>")
-        else:
-            if started:
-                started = False
-                new_text.append("</ul>")
-            new_text.append(line)
-
-    if started:  # the last item might be the end of the document.
-        new_text.append("</ul>")
-    return "\n".join(new_text)
