@@ -56,7 +56,8 @@ def common_markdown_items(text):
             new_text.append("<hr/>")
 
         elif line.startswith('#'):  # it's a heading.
-            t = f"""<div class="heading">{line}</div><hr/>"""
+            new_line = line.upper().strip("#")
+            t = f"""<div class="heading">{new_line}</div><hr/>"""
             new_text.append(t)
 
         elif "[" in line:
