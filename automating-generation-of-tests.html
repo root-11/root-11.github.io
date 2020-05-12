@@ -1,0 +1,186 @@
+<html><head><style type="text/css">body {
+  font-family: Monospace, /* Linux = DejaVu Sans Mono */
+               Courier;   /* MacOSX & Windows = Courier */
+  font-size: 16;
+  max-width: 900px;  /* For Desktop PC (see @media for Tablets/Phones) */
+  padding-left: 2%;
+  padding-right: 3%;
+  margin: 0 auto;
+  background: #F5F5F0;
+}
+
+
+
+a {
+  color: black;
+  font-weight: bold;
+}
+
+img {
+  border: none;
+}
+
+p {
+  margin-top: 0px;
+  margin-bottom: 4ch;
+  text-align: justify;
+}
+sup {
+  vertical-align: 0.3em;
+  font-size: 0.65em;
+}
+
+pre {
+  font-family: Monospace, /* Linux = DejaVu Sans Mono */
+               Courier;   /* MacOSX & Windows = Courier */
+  font-size: 16;
+  background-color: white;
+  border: 1px solid Black;
+  padding-left: 2%;
+  padding-top: 1ch;
+  padding-bottom: 1ch;
+  overflow: scroll;
+}
+
+div.heading {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/** {
+  font-size: 16px;
+}*/
+@media (max-width: 500px) { /* For small screen decices */
+  *{
+    font-size: 12px;
+  }
+  pre {
+   font-size: 11px;
+  }
+}
+.title {
+  text-decoration: none;
+}
+
+img.pixel, canvas.pixel {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+blockquote {
+background-color: #f3f3f3;
+border: dashed 1px grey;
+width: 97.5%;
+font-style: italic;
+text-align: justify;
+
+padding: 1ch;
+padding-top: 2ch;
+padding-bottom: 2ch;
+
+margin : 0ch;
+margin-bottom: 2ch;
+margin-top: 0ch;
+}
+
+blockquote div {
+text-transform: none;
+text-align: right;
+width: 100%;
+}</style><title>automating generation of tests</title></head><body><br>
+<center>
+
+<div style="display: inline-block; vertical-align:middle;">
+
+    <a href="index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a><hr/><div style="text-align: justify;display: inline-block; width: 100%;">
+    <a class="title" href="about.html">ABOUT</a> &nbsp;
+    <a class="title" href="contact.html">EMAIL</a> &nbsp;
+    <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+</div>
+</div>
+</center>
+    <br>
+    <br>
+    <div style="margin-bottom: 3ch;text-transform: none;">
+</div><div style="margin-bottom: 3ch;text-transform: none;">2020-05-12</div><div class="heading">automating generation of tests</div><hr/><p>It's often a challenge to assure that tests cover all combinations of inputs when they're written by hand.
+The logical thing is therefore NOT to write them by hand. Let python do that for you.</p>
+<p>Here's an example.<br />
+I have a function, that I'd like to test for various inputs. It works for what I intended, but I'd like to check.
+In addition I'd like to see all the cases where the code raises an exception.</p>
+<pre><code>def adder(a, b):  # function to test.
+    """ adds a to b"""
+    return a + b
+</code></pre>
+<p>the input options are integers, floats, lists and strings:</p>
+<pre><code>options = [9, 9.0, [9], "9"]
+</code></pre>
+<p>I also need a template that reflects the test I would write, should I have written it by hand. This is a string akin
+to this:</p>
+<pre><code>test_template = """
+
+def test_adder_{}():
+    _ = adder{}
+"""
+</code></pre>
+<p>With these 3 components, I can now generate my tests automatically and write any that fail out automatically.</p>
+<pre><code>from pathlib import Path
+from itertools import product
+
+
+def test_discovery():
+    test_number = 0
+    for c in product(*[options, options]):  # the cartesian product of all inputs.
+        test_number += 1  
+        try:  
+            adder(*c)  # the exercise of my target function
+        except Exception:
+            new_test = test_template.format(test_number, c)   # formatting of the test template to a test.
+            with Path(__file__).open('a') as fo:  # appending the test to this script.
+                fo.write(new_test)
+</code></pre>
+<p>When the function <code>test_discovery</code>, above, is called, it will <strong>append</strong> the tests that raise <code>exeception</code>, like this:</p>
+<pre><code>test_discovery()
+
+
+def test_adder_3():
+    _ = adder(9, [9])
+
+
+def test_adder_4():
+    _ = adder(9, '9')
+
+
+def test_adder_7():
+    _ = adder(9.0, [9])
+
+
+def test_adder_8():
+    _ = adder(9.0, '9')
+
+
+def test_adder_9():
+    _ = adder([9], 9)
+
+
+def test_adder_10():
+    _ = adder([9], 9.0)
+
+
+def test_adder_12():
+    _ = adder([9], '9')
+
+
+def test_adder_13():
+    _ = adder('9', 9)
+
+
+def test_adder_14():
+    _ = adder('9', 9.0)
+
+
+def test_adder_15():
+    _ = adder('9', [9])
+</code></pre>
+<p>As you may notice the test name numbers are not chronological, as the tests that pass have not been written.</p>
+<p>Neat he?</p></body></html>
