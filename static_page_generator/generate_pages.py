@@ -60,7 +60,8 @@ def main():
 
 def add_entry_to_index(path, title):
     now = datetime.now().date()
-    new_entry = f"""{now}: <a href="{path}">{title}</a><br>"""
+    title_as_text = title.replace("-", " ")
+    new_entry = f"""{now}: <a href="{path}">{title_as_text}</a><br>"""
 
     with index_file.open('r') as fi:
         text = fi.read().split('\n')
