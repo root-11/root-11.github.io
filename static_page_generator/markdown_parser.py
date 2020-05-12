@@ -60,7 +60,7 @@ def common_markdown_items(text):
             t = f"""<div class="heading">{new_line}</div><hr/>"""
             new_text.append(t)
 
-        elif "[" in line:
+        elif "[" in line and not line.startswith(" " * 4):
             t = replace_urls(line)
             new_text.append(t)
         else:

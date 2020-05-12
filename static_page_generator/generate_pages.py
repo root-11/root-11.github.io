@@ -38,8 +38,9 @@ def main():
         new_name = str(item.name).replace(".md", ".html")
         new_file = root / new_name
 
-        # if new_file.exists():
-        #     continue
+        if new_file.exists():
+            continue
+        print(f"creating {new_name} ")
 
         text = item.read_text()
         html = markdown_to_html(text=text, title=title)
@@ -64,9 +65,9 @@ def add_entry_to_index(path, title):
     with index_file.open('r') as fi:
         text = fi.read().split('\n')
         if any(title in line for line in text):
-            print(f"{title} already exists.")
             return  # skip.
 
+    print(f"adding {title} to index.")
     text.insert(4, new_entry)
 
     with index_file.open('w') as fo:
