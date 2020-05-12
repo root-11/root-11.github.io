@@ -43,7 +43,8 @@ def main():
         print(f"creating {new_name} ")
 
         text = item.read_text()
-        html = markdown_to_html(text=text, title=title)
+        title_as_text = title.replace("-", " ")
+        html = markdown_to_html(text=text, title=title_as_text)
         with new_file.open('w') as fo:
             fo.write(html)
 
