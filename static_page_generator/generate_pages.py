@@ -28,7 +28,10 @@ def main():
                 queue.append(item)
 
             if item.name == 'index.md':
-                continue
+                continue  # It's the index.
+
+            if str(item.name).startswith("-"):
+                continue  # It's a draft.
 
             if str(item).endswith('.md'):
                 files.append(item)
