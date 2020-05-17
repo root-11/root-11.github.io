@@ -81,9 +81,17 @@ def main():
     text = index_file.read_text()
 
     html = markdown_to_html(text=text, title="BJORN MADSEN'S WEBSITE", root="")
+    html = remove_table_head(html)
     with new_file.open('w') as fo:
         fo.write(html)
 
+
+def remove_table_head(html):
+    start = html.find("<thead>")
+    end = html.find("</thead>")
+    end_of_tag = html.find(">", end)
+    html_after = html[:start] + html[end_of_tag+1:]
+    return html_after
 
 if __name__ == "__main__":
     main()
