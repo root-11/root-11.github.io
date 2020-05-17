@@ -12,8 +12,9 @@ index_text = index_file.read_text('utf-8')
 dont_index = ['about', 'contact']
 
 
-css_file = content / 'css.css'
-css = css_file.read_text('utf-8')
+# css_file = content / 'css.css'
+# css = css_file.read_text('utf-8')
+css = '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
 
 header_file = content / 'header.txt'
 header = header_file.read_text('utf-8')

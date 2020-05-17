@@ -1,6 +1,6 @@
 Understanding the principles of genes and mutation as the driving mechanism
 for evolution is common today. Less common is the availability of a minimal
-viable example, that showcases the method.  
+viable [example](example.py), that showcases the method.  
 So here's an example I've used to enlighten friends, where I deliberately
 deviate from pep-8 to only introduce imports when they're needed.
 
@@ -46,6 +46,23 @@ any random sequence that contains all towns:
         cities = list(city_map)
         random.shuffle(cities)
         return cities 
+
+
+To determine which of two routes is the shorter, it is nice to have a function 
+that does the work for us. Just remember one thing:  
+The TSP returns to start after traveling through all cities, so the distance
+must include the consideration that it returns to start after all cities have
+been visited.
+
+    def route_length(citymap, route):
+        dist = 0.0
+        a = route[0]
+        for b in route[1:] + route[:1]:
+            city_a, city_b = citymap[a], citymap[b]
+            dist += distance(city_a, city_b)
+            a = b
+        return int(dist)
+
 
 Let's make a helper to look at it:
 
@@ -98,30 +115,14 @@ after  \[1,2,3,4,_**6,5**_,7,8,9]
 
 We can express this change as a very simple function:
 
-def mutate(route):
-    new_route = route[:]   # copy the route
-    cut = random.randint(1, len(route)-2)  # select the index point.
-    new_route[cut], new_route[cut+1] = route[cut+1], route[cut]  # swap the values.
-    return new_route
-
+    def mutate(route):
+        new_route = route[:]   # copy the route
+        cut = random.randint(1, len(route)-2)  # select the index point.
+        new_route[cut], new_route[cut+1] = route[cut+1], route[cut]  # swap the values.
+        return new_route
 
 The one thing that remains to be discussed is the relationship between fitness
 and evolution. We want the "fittest" to be the shortest path.  
-To determine which of two routes is the shorter, it is nice to have a function 
-that does the work for us. Just remember one thing:  
-The TSP returns to start after traveling through all cities, so the distance
-must include the consideration that it returns to start after all cities have
-been visited.
-
-    def route_length(citymap, route):
-        dist = 0.0
-        a = route[0]
-        for b in route[1:] + route[:1]:
-            city_a, city_b = citymap[a], citymap[b]
-            dist += distance(city_a, city_b)
-            a = b
-        return int(dist)
-
 
 Lets' try it out and check if the new route is better. Spoiler alert: I won't be.
 
