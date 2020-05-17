@@ -1,0 +1,17 @@
+<br>
+<center>
+
+<div style="display: inline-block; vertical-align:middle;">
+
+    <a href="/index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br>
+    </a><hr/><div style="text-align: justify;display: inline-block; width: 100%;">
+    <a class="title" href="content/about.html">ABOUT</a> &nbsp;
+    <a class="title" href="content/contact.html">EMAIL</a> &nbsp;
+    <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+</div>
+</div>
+</center>
+    <br>
+    <br>
+    <div style="margin-bottom: 3ch;text-transform: none;">
+</div>
