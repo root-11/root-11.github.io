@@ -2,126 +2,48 @@ from pathlib import Path
 from datetime import datetime
 from markdown import markdown
 
-
 root = Path(__file__).parent
 content = root / 'content'
 
-index_file = content / 'index.md'
-index_text = index_file.read_text('utf-8')
-
 dont_index = ['about', 'contact']
 
+html_ = """<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{root}style.css" rel="stylesheet" type="text/css">
+    <title>{title}</title>
+</head>
+<body>
+<br>
+<div class = "center">
+    <a href="{root}index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a>
+    <hr id="hrid"/>
+    <div style="text-align: center; display: inline-block; width: 100%;">
+        <a class="title" href="{root}about.html">ABOUT</a> &nbsp;
+        <a class="title" href="{root}contact.html">EMAIL</a> &nbsp;
+        <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+    </div>
+</div>
+    <br><br>
+    <div style="margin-bottom: 3ch;text-transform: none;"></div>
 
-# css_file = content / 'css.css'
-# css = css_file.read_text('utf-8')
-css = '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+{dop}    
+{body}
 
-header_file = content / 'header.txt'
-header = header_file.read_text('utf-8')
+</body>
+</html>
+"""
 
 
-def markdown_to_html(text, title):
-    """
-    :param path:
-    :return: nice readable html
-
-    page guide:
-
-    [date of publication]
-
-    [title]
-    --------- line -----------------
-    text
-    ...
-    end of text
-                  <--- deliberate white space.
-    [sub title]
-    --------- line -----------------
-    text
-    ...
-                <--- deliberate white space.
-
-    """
-    style_ = '<style type="text/css">{}</style>'
-    title_ = '<title>{}</title>'
-    head_ = "<head>{}{}</head>".format(style_.format(css), title_.format(title))
-    html_ = "<html>{head}{body}</html>"
-    body_ = "<body>{}</body>"
-
-    doc = markdown(text)
-
+def markdown_to_html(text, title, root="../../"):
+    doc = markdown(text, extensions=['tables'])
     now = datetime.now().date()
     date_of_publication = f"""<div style="margin-bottom: 3ch;text-transform: none;">{now}</div><div class="heading">{title}</div><hr/>"""
-    doc = html_.format(head=head_, body=body_.format(header + date_of_publication + doc))
+    doc = html_.format(title=title, dop=date_of_publication, body=doc, root=root)
     return doc
 
 
-# def common_markdown_items(text):
-#     new_text = []
-#     for line in text.split('\n'):
-#         if set(line) == set('-'):
-#             new_text.append("<hr/>")
-#
-#         elif line.startswith('#'):  # it's a heading.
-#             new_line = line.upper().strip("#")
-#             t = f"""<div class="heading">{new_line}</div><hr/>"""
-#             new_text.append(t)
-#
-#         # elif "[" in line and not line.startswith(" " * 4):
-#         #     t = replace_urls(line)
-#         #     new_text.append(t)
-#         else:
-#             new_text.append(line)
-#
-#     return "\n".join(new_text)
-#
-#
-# def paragraphs(text):
-#     NL = '\n\n'
-#     start_ix = 0
-#     outside_paragraph = True
-#     inside_paragraph = False
-#     sop, eop = '<p style="text-align: left;">', '</p>'
-#
-#     while True:
-#         if outside_paragraph:
-#             text.replace(NL, sop, 1)
-#             outside_paragraph = False
-#             inside_paragraph = True
-#             continue
-#
-#         if inside_paragraph:
-#             if text.count(NL) % 2 == 1:
-#                 text.replace(NL, eop+sop, 1)
-#             else:
-#                 text.replace(NL, eop, 1)
-#                 outside_paragraph = True
-#                 inside_paragraph = False
-#             continue
-#
-#     if outside_paragraph:
-#         text += '</p>'
-#
-#
-# def replace_urls(line):
-#     a, b, c = line.count('['), line.count(']('), line.count(')')
-#     if b <= a and c <= a:
-#         start_ix = 0
-#         while "[" in line[start_ix:]:
-#             a = line.find("[", start_ix)
-#             b = line.find('](', a)
-#             c = line.find(')', b)
-#             if a < b < c:
-#                 md_url, text, url = line[a:c + 1], line[a + 1:b], line[b + 2:c]
-#                 html = f'<a href="{url}">{text}</a>'
-#                 line = line.replace(md_url, html)
-#                 start_ix = c + 1
-#     return line
-#
-
-
 def main():
-    content = root / 'content'
     assert content.exists()
     assert content.is_dir()
 
@@ -135,24 +57,11 @@ def main():
             if item.is_dir():
                 queue.append(item)
 
-            if item.name == 'index.md':
-                continue  # It's the index.
-
-            if str(item.name).startswith("-"):
-                continue  # It's a draft.
-
             if str(item).endswith('.md'):
                 files.append(item)
 
     for item in files:
-
         title = item.name.replace(".md", "")
-        if title in dont_index:
-            continue
-
-        relative_path = f'content/{title}/index.html'
-        check_index(path=relative_path, title=title)
-
         new_file = item.parent / "index.html"
 
         if new_file.exists():
@@ -166,34 +75,14 @@ def main():
             fo.write(html)
 
     # create index.html at the end.
+    index_file = root / 'articles.md'
     new_file = root / 'index.html'
-    html = markdown_to_html(text=index_file.read_text('utf-8'), title="BJORN MADSEN'S WEBSITE")
+    assert new_file.exists()
+    text = index_file.read_text()
+
+    html = markdown_to_html(text=text, title="BJORN MADSEN'S WEBSITE", root="")
     with new_file.open('w') as fo:
         fo.write(html)
-
-
-def check_index(path, title):
-    # assert isinstance(path, Path)
-    now = datetime.now().date()
-    title_as_text = title.replace("-", " ")
-
-    new_entry = f"""{now}: <a href="{path}">{title_as_text}</a><br>"""
-
-    with index_file.open('r') as fi:
-        text = fi.read()
-        if new_entry in text:
-            return
-
-    print(f"adding {title} to index.")
-    text = text.split('\n')
-    text.insert(4, new_entry)
-
-    with index_file.open('w') as fo:
-        fo.write("\n".join(text))
-
-
-def make_index_html():
-    pass
 
 
 if __name__ == "__main__":
