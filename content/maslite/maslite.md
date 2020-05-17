@@ -5,7 +5,7 @@ It looks like if it was out of development, as has been sitting idle for quite s
 quite the opposite: MASLite has matured over 8 years and has proven itself as a stable platform for quite some
 time.
 
-# A BIT OF HISTORY
+#### A BIT OF HISTORY
 
 **Version 1**  
 I first wrote MASLite the first time in 2012 when I was working on my Ph.D. project. The goals was to build an event 
@@ -41,7 +41,7 @@ Version 4 had a throughput of 275,000,000 messages per second and proved itself 
 processing framework and a new simulation engine. 
  
 
-# LESSONS LEARNED
+#### LESSONS LEARNED
 
 In retrospect version 4 could have been written is one go. However I didn't 
 have the experience and hence didn't plan it properly. In addition the literature
