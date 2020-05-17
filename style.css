@@ -67,7 +67,13 @@ div.heading {
     font-size: 12px;
   }
   pre {
-   font-size: 11px;
+    font-size: 11px;
+    overflow:auto;
+
+  }
+  img {
+    max-width:100%;
+    height:auto;
   }
 }
 .title {
