@@ -18,7 +18,7 @@
     <br><br>
     <div style="margin-bottom: 3ch;text-transform: none;"></div>
 
-<div style="margin-bottom: 3ch;text-transform: none;">2020-05-17</div><div class="heading">solving traveling salesmans problem with genetic algorithm</div><hr/>    
+<div style="margin-bottom: 3ch;text-transform: none;">2020-05-18</div><div class="heading">solving traveling salesmans problem with genetic algorithm</div><hr/>    
 <p>Understanding the principles of genes and mutation as the driving mechanism
 for evolution is common today. Less common is the availability of a minimal
 viable <a href="example.py">example</a>, that showcases the method.<br />
@@ -152,7 +152,11 @@ for _ in range(generations):
 print("shortest distance after", generations, ":", shortest_distance)
 plot(city_map, first_route)
 </code></pre>
-<p><img alt="3" src="../myplot3.png" /></p>
+<p>The for loop will now generate solutions, test their fitness and retain the better.<br />
+Each iteration will look like this:</p>
+<p><img alt="ga_tsp" src="ga_tsp.gif" /> </p>
+<p>And the winner is:</p>
+<p><img alt="3" src="myplot3.png" /></p>
 
 </body>
 </html>

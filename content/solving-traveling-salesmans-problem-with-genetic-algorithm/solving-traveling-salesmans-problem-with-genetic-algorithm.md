@@ -154,8 +154,18 @@ of the _fittest_ solution:
     
     print("shortest distance after", generations, ":", shortest_distance)
     plot(city_map, first_route)
-   
-![3](../myplot3.png)
+
+
+The for loop will now generate solutions, test their fitness and retain the better.  
+Each iteration will look like this:
+
+![ga_tsp](ga_tsp.gif) 
+
+
+And the winner is:
+
+  
+![3](myplot3.png)
 
 
 
