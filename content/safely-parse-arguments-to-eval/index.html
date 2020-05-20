@@ -1,0 +1,170 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="../../style.css" rel="stylesheet" type="text/css">
+    <title>safely parse arguments to eval</title>
+</head>
+<body>
+<br>
+<div class = "center">
+    <a href="../../index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a>
+    <hr id="hrid"/>
+    <div style="text-align: center; display: inline-block; width: 100%;">
+        <a class="title" href="../../about.html">ABOUT</a> &nbsp;
+        <a class="title" href="../../contact.html">EMAIL</a> &nbsp;
+        <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+    </div>
+</div>
+    <br><br>
+    <div style="margin-bottom: 3ch;text-transform: none;"></div>
+
+<div style="margin-bottom: 3ch;text-transform: none;">2020-05-19</div><div class="heading">safely parse arguments to eval</div><hr/>    
+<p>We often want to allow users to execute arbitrary command-like statements without having 
+to write a parser form scratch and at the same time worry that the user might attempt
+something malicious.</p>
+<p>Let's start with an example where the user who knows nothing of python needs to perform 
+some math based on a custom function, where the data source is a table and the function 
+needs to be performed on each row.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>A</th>
+<th>B</th>
+<th>C</th>
+<th>D</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>123</td>
+<td>2</td>
+<td>32</td>
+<td>321</td>
+</tr>
+<tr>
+<td>2</td>
+<td>133</td>
+<td>2</td>
+<td>33</td>
+<td>123</td>
+</tr>
+<tr>
+<td>3</td>
+<td>143</td>
+<td>3</td>
+<td>34</td>
+<td>111</td>
+</tr>
+<tr>
+<td>4</td>
+<td>163</td>
+<td>3</td>
+<td>35</td>
+<td>222</td>
+</tr>
+<tr>
+<td>5</td>
+<td>143</td>
+<td>4</td>
+<td>36</td>
+<td>333</td>
+</tr>
+<tr>
+<td>6</td>
+<td>123</td>
+<td>4</td>
+<td>37</td>
+<td>444</td>
+</tr>
+</tbody>
+</table>
+<p>the user defines the function for column <strong><code>E</code></strong> as:  </p>
+<pre><code>`func = "(int(round(('A'*'B)+('C'*'A') + 4, 0)) + max('D, 'B))/'A'"`
+</code></pre>
+<p>When looping over the table, we want to add column <code>E</code> to the table as the result of the function.<br />
+To do so, we will need to:  </p>
+<ol>
+<li>check the function for malicious content.</li>
+<li>if okay, evaluate the function and return the result.</li>
+</ol>
+<p>We start with the table:</p>
+<pre><code>table = {
+    0: ['A', 'B', 'C', 'D'],
+    1: [123, 2, 32, 321],
+    2: [133, 2, 33, 123],
+    3: [143, 3, 34, 111],
+    4: [163, 3, 35, 222],
+    5: [143, 4, 36, 333],
+    6: [123, 4, 37, 444],
+}
+</code></pre>
+<p>and the function provided by the user:</p>
+<pre><code>func = "(int(round(('A'*'B)+('C'*'A') + 4, 0)) + max('D, 'B))/'A'"
+new_column_name = "E"
+</code></pre>
+<p>With the following filters, we can check the function by seeing
+if anything is left after pruning the function:</p>
+<pre><code>operators = {"max", "min", "int", "round", "+", "-", "/", "*", "(", ")", " ", ",", "'", '"'}
+numbers = set('1234567890')
+table_headers = table[0]
+
+remainder = func
+for word in list(numbers) + list(operators) + table_headers:
+    remainder = remainder.replace(word, "")
+if remainder:
+    raise ValueError(f"Bad sign near '{remainder}' in '{func}'")
+</code></pre>
+<p>At this point we know the function is not malicious, but we don't know if any
+combination of column names and data can produce malicious content.</p>
+<p>To process the rows, we will therefore have to substitute each heading with data
+and check it in the same manner:</p>
+<pre><code>for row_index in table:  
+    if row_index == 0: 
+        table[0] = table[0] + [new_column_name]
+        continue
+
+    row = table[row_index]
+
+    data = {k: str(v) for k, v in zip(table_headers, row)}
+    # example data = {'A': 123, 'B': 2, 'C': 32, 'D': 321}
+
+    # 1. remove text marks.
+    new_func = func
+    new_func = new_func.replace("'", "").replace('"', '')
+
+    # 2. replace column names with values
+    for k, v in data.items():
+        new_func = new_func.replace(k, str(v))
+
+    # 3. we check that no malicious content is left in the string
+    # for example a malicious user could put insert `sys.exit()` maliciously.
+
+    c = new_func.replace(" ", "")
+    for word in operators.union(numbers):
+        c = c.replace(word, "")
+        if not c:
+            break
+    if c:  # it's not safe!
+        raise ValueError(f"Bad sign near '{c}' in '{func}'")
+
+    # 4. we use pythons interpreter to evaluate the string as if it was math.
+    table[row_index] = row + [eval(new_func)]
+
+for k, v in table.items():
+    print(k, ":", v)
+
+# outputs:
+# 0 : ['A', 'B', 'C', 'D', 'E']
+# 1 : [123, 2, 32, 321, 36.642276422764226]
+# 2 : [133, 2, 33, 123, 35.954887218045116]
+# 3 : [143, 3, 34, 111, 37.80419580419581]
+# 4 : [163, 3, 35, 222, 39.38650306748466]
+# 5 : [143, 4, 36, 333, 42.35664335664335]
+# 6 : [123, 4, 37, 444, 44.642276422764226]
+</code></pre>
+<p>All the code is available in <a href="example.py">example.py</a>.</p>
+
+</body>
+</html>

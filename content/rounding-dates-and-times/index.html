@@ -1,0 +1,92 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="../../style.css" rel="stylesheet" type="text/css">
+    <title>rounding dates and times</title>
+</head>
+<body>
+<br>
+<div class = "center">
+    <a href="../../index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a>
+    <hr id="hrid"/>
+    <div style="text-align: center; display: inline-block; width: 100%;">
+        <a class="title" href="../../about.html">ABOUT</a> &nbsp;
+        <a class="title" href="../../contact.html">EMAIL</a> &nbsp;
+        <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+    </div>
+</div>
+    <br><br>
+    <div style="margin-bottom: 3ch;text-transform: none;"></div>
+
+<div style="margin-bottom: 3ch;text-transform: none;">2020-05-20</div><div class="heading">rounding dates and times</div><hr/>    
+<p>I often encounter people who struggle to merge two data sets where the datasets
+have different resolution on datetime. It really shouldn't be a
+problem, but it often comes to the choice of replacing the last value with zero or similar.
+I prefer round to floor. Here are a couple of examples:</p>
+<p>Round a date to the first of the month:  </p>
+<pre><code>d = date(1990, 7, 11)
+print(d, "--&gt;", floor(d, '1M'))  
+# 1990-07-11 --&gt; 1990-07-01
+</code></pre>
+<p>Round a time down to the nearest 10 minute interval:</p>
+<pre><code>t = time(23,47,11)
+print(t, "--&gt;", floor(t, "10m"))  
+# 23:47:11 --&gt; 23:40:00
+</code></pre>
+<p>Round a datetime to a whole hour:</p>
+<pre><code>d = datetime(1990, 7, 11, 23, 1, 1)
+print(d, "--&gt;", floor(d, '1h'))  
+# 1990-07-11 23:01:01 --&gt; 1990-07-11 23:00:00
+</code></pre>
+<p>Round a date to first of every second month (because I can):</p>
+<pre><code>d = date(1990, 7, 11)  
+print(d, "--&gt;", floor(d, '2M'))  
+# 1990-07-11 --&gt; 1990-06-01
+</code></pre>
+<p>So how does it work?<br />
+There are 4 parts:</p>
+<p>First, setting up the reference system requires that we can detect numbers and the
+letter value used for rounding.</p>
+<pre><code>numbers = set('1234567890')
+reference = {'Y': 'year', 'M': 'month', 'D': 'day', 
+             'h': 'hour', 'm': 'minute', 's': "second", 'u': "microsecond"}
+reference_rank = 'usmhDMY'  # deliberately starting from the smallest value.
+</code></pre>
+<p>Second, to interpret of the rounding system now boils down to finding the first character
+and looking it up in the dictionary <code>reference</code> </p>
+<pre><code>def get_interval_reference(interval):
+    for c in interval:
+        if c in reference:
+            return reference[c]
+    raise ValueError(f"interval must be one of {reference.keys()}")
+</code></pre>
+<p>Third, interpreting the numerical value works the same way:</p>
+<pre><code>def get_interval(interval):
+    return int("".join([i for i in interval if i in numbers]))
+</code></pre>
+<p>Fourth and final rounding the value is done easily using all datetime functions
+<code>replace</code> method. We just need to remember one thing: That all values preceding
+the rounded value must be zero. But that's it.</p>
+<pre><code>from datetime import date, time, datetime
+
+def floor(value, interval):
+    if not isinstance(value, (datetime, date, time)):
+        raise TypeError(f"Got {type(value)}, expected datetime, date or time")
+    ir = get_interval_reference(interval)  # ex. 10m --&gt; m --&gt; minute
+    iv = get_interval(interval)            # ex. 10m --&gt; 10
+    v = getattr(value, ir)                 # ex. 23:47:11 --&gt; 47
+    floor_v = (v // iv) * iv               # ex. (47 // 10) * 10 = 40
+    irv = {ir: floor_v}                    # ex. {minute: 40}
+
+    for c in reference_rank:  
+        lower_reference = reference[c]
+        if lower_reference == ir:
+            return value.replace(**irv)
+        if hasattr(value, lower_reference):
+            min_value = getattr(value.min, lower_reference)
+            value = value.replace(**{lower_reference: min_value})
+</code></pre>
+<p>An example is available (as usual) as <a href="example.py">example.py</a></p>
+
+</body>
+</html>

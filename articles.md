@@ -1,5 +1,9 @@
+This is my personal website, where you can find code and solutions to problems I've discovered.
+
 date | article 
 ---|---
+2020-05-19:| [rounding datetime, dates and times](content/rounding-dates-and-times/index.html)
+2020-05-18:| [safely parse arguments to pythons `eval`](content/safely-parse-arguments-to-eval/index.html)
 2020-05-17:| [solving traveling salesmans problem with genetic algorithm](content/solving-traveling-salesmans-problem-with-genetic-algorithm/index.html) 
 2020-05-14:| [graceful interrupt in batch jobs using pythons yield](content/graceful-interrupt-in-batch-jobs-using-pythons-yield/index.html) 
 2020-05-11:| [brute force solution to the knapsack problem](content/brute-force-solution-to-the-knapsack-problem/index.html) 
