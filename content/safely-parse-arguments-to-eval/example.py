@@ -2,8 +2,8 @@
 table = {
     0: ['A', 'B', 'C', 'D'],
     1: [123, 2, 32, 321],
-    2: [133, 2, 33, 123],
-    3: [143, 3, 34, 111],
+    2: [133, 2.1, 33, 123],
+    3: [143, 3.1e4, 34, 111],
     4: [163, 3, 35, 222],
     5: [143, 4, 36, 333],
     6: [123, 4, 37, 444],
@@ -15,13 +15,14 @@ new_column_name = "E"
 
 # our filters:
 operators = {"max", "min", "int", "round", "+", "-", "/", "*", "(", ")", " ", ",", "'", '"'}
-numbers = set('1234567890')
+numbers = set('1234567890e.')
+permitted = list(operators) + list(numbers)
 
 # 1. first check the function:
 table_headers = table[0]
 
 remainder = func
-for word in list(numbers) + list(operators) + table_headers:
+for word in table_headers + permitted:
     remainder = remainder.replace(word, "")
 if remainder:
     raise ValueError(f"Bad sign near '{remainder}' in '{func}'")
@@ -36,19 +37,19 @@ for row_index in table:
     data = {k: str(v) for k, v in zip(table_headers, row)}
     # example data = {'A': 123, 'B': 2, 'C': 32, 'D': 321}
 
-    # 1. remove text marks.
+    # 1. replace column names with values
     new_func = func
-    new_func = new_func.replace("'", "").replace('"', '')
-
-    # 2. replace column names with values
     for k, v in data.items():
         new_func = new_func.replace(k, str(v))
+
+    # 2. remove text marks.
+    new_func = new_func.replace("'", "").replace('"', '')
 
     # 3. we check that no malicious content is left in the string
     # for example a malicious user could put insert `sys.exit()` maliciously.
 
     c = new_func.replace(" ", "")
-    for word in operators.union(numbers):
+    for word in permitted:  # systematically remove the longest word first.
         c = c.replace(word, "")
         if not c:
             break
@@ -63,8 +64,8 @@ for k, v in table.items():
 
 # 0 : ['A', 'B', 'C', 'D', 'E']
 # 1 : [123, 2, 32, 321, 36.642276422764226]
-# 2 : [133, 2, 33, 123, 35.954887218045116]
-# 3 : [143, 3, 34, 111, 37.80419580419581]
+# 2 : [133, 2.1, 33, 123, 36.05263157894737]
+# 3 : [143, 31000.0, 34, 111, 31250.81118881119]
 # 4 : [163, 3, 35, 222, 39.38650306748466]
 # 5 : [143, 4, 36, 333, 42.35664335664335]
 # 6 : [123, 4, 37, 444, 44.642276422764226]

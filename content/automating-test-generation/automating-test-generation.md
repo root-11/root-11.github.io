@@ -88,6 +88,8 @@ When the function `test_discovery`, above, is called, it will **append** the tes
 
 As you may notice the test name numbers are not chronological, as the tests that pass have not been written.
 
-Neat he?
+Neat he? 
+
+The code is available (as usual) in [example.py](example.py)
 
 
