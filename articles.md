@@ -2,6 +2,7 @@ This is my personal website, where you can find code and solutions to problems I
 
 date | article 
 ---|---
+2020-05-23:| [calculating the convex hull](content/calculating-the-convex-hull/index.html)
 2020-05-19:| [rounding datetime, dates and times](content/rounding-dates-and-times/index.html)
 2020-05-18:| [safely parse arguments to pythons `eval`](content/safely-parse-arguments-to-eval/index.html)
 2020-05-17:| [solving traveling salesmans problem with genetic algorithm](content/solving-traveling-salesmans-problem-with-genetic-algorithm/index.html) 

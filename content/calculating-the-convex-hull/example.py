@@ -22,12 +22,9 @@ visit all nodes in a sequential appraoch. This is obviously O(n).
 
 
 """
-
+from matplotlib import pyplot as plt
 from collections import namedtuple
 from random import randint, seed
-from pathlib import Path
-
-
 seed(42)
 
 Point = namedtuple('Point', ['x', 'y'])
@@ -42,36 +39,25 @@ def convex_hull(points):
     assert n_points >= 3, "can't have a hull with < 3 points."
     points.sort(key=lambda p: (p.x, p.y))
 
-    lower_limit_upper_hull = min(points[0].y, points[-1].y)
-    upper_limit_lower_hull = max(points[0].y, points[-1].y)
-
     upper_hull = []
     lower_hull = []
     for point in points:
 
-        if point.y > lower_limit_upper_hull:
-            upper_hull.append(point)
-            while len(upper_hull) >= 3:
-                a, b, c = upper_hull[-3:]
-                if right_turn(a, b, c) is True:
-                    break
-                else:
-                    upper_hull.remove(b)
+        upper_hull.append(point)
+        while len(upper_hull) >= 3:
+            a, b, c = upper_hull[-3:]
+            if right_turn(a, b, c) is True:
+                break
+            else:
+                upper_hull.remove(b)
 
-        if point.y < upper_limit_lower_hull:
-            lower_hull.append(point)
-            while len(lower_hull) >= 3:
-                a, b, c = lower_hull[-3:]
-                if right_turn(a, b, c) is False:
-                    break
-                else:
-                    lower_hull.remove(b)
-
-        title = Path(__file__).parent / f"{points.index(point)}.png"
-        plot(points, lower_hull[::-1] + upper_hull[:-1], title=title)
-
-    title = Path(__file__).parent / f"{len(points)}.png"
-    plot(points, lower_hull[::-1] + upper_hull[:-1], title=title)
+        lower_hull.append(point)
+        while len(lower_hull) >= 3:
+            a, b, c = lower_hull[-3:]
+            if right_turn(a, b, c) is False:
+                break
+            else:
+                lower_hull.remove(b)
 
     return upper_hull[:-1] + lower_hull[::-1]
 
@@ -97,8 +83,6 @@ def right_turn(A, B, C):
 
 
 def plot(points, line=None, title=""):
-    from matplotlib import pyplot as plt
-
     plt.figure()
     xs = [c.x for c in points]
     ys = [c.y for c in points]
@@ -110,8 +94,7 @@ def plot(points, line=None, title=""):
         ys = [c.y for c in line]
         plt.plot(xs, ys, 'bo-')
     plt.title(title)
-    # plt.show()
-    plt.savefig(fname=title)
+    plt.show()
 
 
 def test_triangle():
@@ -133,12 +116,7 @@ def test_random():
         plot(points, hull, title=f"{len(hull)} @ {len(points)} points")
 
 
-def animate():
-    points = point_cloud(200)
-    hull = convex_hull(points)
-    # plot(points, hull, title=f"{len(hull)} @ {len(points)} points")
-
-
-animate()
-# test_random()
+test_triangle()
+test_box()
+test_random()
 
