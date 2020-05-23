@@ -173,6 +173,6 @@ Here are some examples:
 
 ![3](random20.png)
 ![3](random200.png)
-![3](random200.png)
+![3](random2000.png)
 
 A classic :-) - As usual [example.py](example.py) is available
