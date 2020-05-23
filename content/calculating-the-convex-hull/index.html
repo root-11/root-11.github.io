@@ -1,0 +1,168 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="../../style.css" rel="stylesheet" type="text/css">
+    <title>calculating the convex hull</title>
+</head>
+<body>
+<br>
+<div class = "center">
+    <a href="../../index.html" style="text-decoration: none;"><b>BJORN MADSEN'S WEBSITE</b><br></a>
+    <hr id="hrid"/>
+    <div style="text-align: center; display: inline-block; width: 100%;">
+        <a class="title" href="../../about.html">ABOUT</a> &nbsp;
+        <a class="title" href="../../contact.html">EMAIL</a> &nbsp;
+        <a class="title" href="https://paypal.me/BjornMadsen">DONATE</a>
+    </div>
+</div>
+    <br><br>
+    <div style="margin-bottom: 3ch;text-transform: none;"></div>
+
+<div style="margin-bottom: 3ch;text-transform: none;">2020-05-23</div><div class="heading">calculating the convex hull</div><hr/>    
+<p>Determining the convex hull is useful for many applications, such as linear 
+programming, where the convex hull declares the boundadry of the solution 
+landscape. In graph theory the convex hull can illustrate the shortest path 
+around nodes and hence be used to determine clusters and overlaps between sets 
+of nodes.</p>
+<p><img alt="gif" src="take1.gif" /></p>
+<p>A textbook approach to solve the convex hull is to use the "left/right turn" 
+approach and visit all nodes in a sequential appraoch. This is obviously O(n),
+but it requires that all nodes have been sorted O(n log n).</p>
+<blockquote>
+<p>Andrew's monotone chain convex hull algorithm constructs the convex hull of a
+set of 2-dimensional points in O(n log n) time.</p>
+<p>It does so by first sorting the points lexicographically (first by x-coordinate,
+and in case of a tie, by y-coordinate), and then constructing upper and lower
+hulls of the points in O(n) time.</p>
+<p>An upper hull is the part of the convex hull, which is visible from the above.
+It runs from its rightmost point to the leftmost point in counterclockwise order.
+Lower hull is the remaining part of the convex hull.</p>
+</blockquote>
+<p><a href="https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain">source</a></p>
+<p>For the algorithm we need very little:</p>
+<pre><code>from collections import namedtuple
+</code></pre>
+<p>With named tuple we can create points as:</p>
+<pre><code>Point = namedtuple('Point', ['x', 'y'])
+</code></pre>
+<p>And this allows us to create a repeateable point cloud using:</p>
+<pre><code>from random import randint, seed
+seed(42)
+
+def point_cloud(n_points, x_max=400, y_max=300):
+    return [Point(x=randint(-x_max, x_max), y=randint(-y_max, y_max)) for _ in range(n_points)]
+</code></pre>
+<p>When traversing the sorted dataset from min(x) to max(x), we will have to assess
+whether each point causes the curve to turn left or right.</p>
+<pre><code>def right_turn(A, B, C):
+    dxAC, dyAC = C.x - A.x, C.y - A.y
+    dxAB, dyAB = B.x - A.x, B.y - A.y
+    if dxAC == 0:
+        aAC = float('inf')
+    else:
+        aAC = dyAC / dxAC
+    if dxAB == 0:
+        aAB = float('inf')
+    else:
+        aAB = dyAB / dxAB
+
+    if aAB &gt; aAC:  # right
+        return True
+    elif aAB &lt; aAC:  # left
+        return False
+    else:  # straight
+        return None
+</code></pre>
+<p>We can use this, then, for the lower and the upper part of the convex hull, 
+so that, respectively:</p>
+<ul>
+<li>all turns on the lower hull are towards the left.</li>
+<li>all turns on the upper hull are towards the right.</li>
+</ul>
+<p>If we encounter a turn in the opposite direction, we will have to backtrack, 
+and remove all preceding points for the list that constitutes the hull, until
+all turns are in the correct direction.</p>
+<p>Note that some <a href="https://github.com/norvig/pytudes/blob/master/ipynb/Convex%20Hull.ipynb">textbooks</a> 
+traverse the dataset twice: Once for the upper hull,  then once for the lower hull.
+I prefer having making both lists at once. </p>
+<pre><code>def convex_hull(points):
+    n_points = len(points)
+    assert n_points &gt;= 3, "can't have a hull with &lt; 3 points."
+    points.sort(key=lambda p: (p.x, p.y))
+
+    upper_hull = []
+    lower_hull = []
+    for point in points:
+
+        upper_hull.append(point)
+        while len(upper_hull) &gt;= 3:
+            a, b, c = upper_hull[-3:]
+            if right_turn(a, b, c) is True:
+                break
+            else:
+                upper_hull.remove(b)
+
+        lower_hull.append(point)
+        while len(lower_hull) &gt;= 3:
+            a, b, c = lower_hull[-3:]
+            if right_turn(a, b, c) is False:
+                break
+            else:
+                lower_hull.remove(b)
+
+    return upper_hull[:-1] + lower_hull[::-1]
+</code></pre>
+<p>The missing bit is to look at the data. We can do that with matplotlib:</p>
+<pre><code>from matplotlib import pyplot as plt
+
+def plot(points, line=None, title=""):
+    from matplotlib import pyplot as plt
+
+    plt.figure()
+    xs = [c.x for c in points]
+    ys = [c.y for c in points]
+
+    plt.plot(xs, ys, 'o')
+
+    if line:
+        xs = [c.x for c in line]
+        ys = [c.y for c in line]
+        plt.plot(xs, ys, 'bo-')
+    plt.title(title)
+    plt.show()
+</code></pre>
+<p>Here are some examples:</p>
+<h3>A triangle</h3>
+<pre><code>def test_triangle():
+    points = [Point(x, y) for x, y in [(0, 0), (0, 1), (1, 0)]]
+    hull = convex_hull(points)
+    plot(points, hull, title="triangle")
+
+test_triangle()
+</code></pre>
+<p><img alt="1" src="triangle.png" /></p>
+<h3>A box</h3>
+<pre><code>def test_box():
+    points = [Point(x, y) for x, y in [(0, 0), (0, 1), (0.5, 0.5), (1, 1), (1, 0)]]
+    hull = convex_hull(points)
+    plot(points, hull, title="box")
+
+test_box()
+</code></pre>
+<p><img alt="2" src="box.png" /></p>
+<h3>Random clouds</h3>
+<pre><code>def test_random():
+    for i in range(1,4):
+        points = point_cloud(2*10**i)
+        hull = convex_hull(points)
+        plot(points, hull, title=f"{len(hull)} @ {len(points)} points")
+
+test_random()
+</code></pre>
+<p><img alt="3" src="random20.png" />
+<img alt="3" src="random200.png" />
+<img alt="3" src="random200.png" /></p>
+<p>A classic :-)</p>
+
+</body>
+</html>
