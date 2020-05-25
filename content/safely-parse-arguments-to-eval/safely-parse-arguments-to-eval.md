@@ -92,10 +92,10 @@ The user defined function can now be processed by:
 
 1. checking the UDF for invalid content.
 2. processing each row, by:
-  1. replacing the headers to values from the row.
-  2. getting rid of the remaining text marks.
-  3. check that no malicious content is left in the string
-  4. evaluate the string as if it was math and update the table with the calculated value.
+3. replacing the headers to values from the row.
+4. getting rid of the remaining text marks.
+5. check that no malicious content is left in the string
+6. evaluate the string as if it was math and update the table with the calculated value.
 
 Like this:
 
@@ -117,12 +117,12 @@ Like this:
     
         # [2]
         for row_index in (i for i in table if i > 0):
-            data = {k: str(v) for k, v in zip(table_headers, table[row_index])}  # [2.1]  
-            new_func = strip(replace(func, data), ["'", '"'])  # [2.2]
+            data = {k: str(v) for k, v in zip(table_headers, table[row_index])}  # [3]  
+            new_func = strip(replace(func, data), ["'", '"'])  # [4]
        
-            if strip(new_func, permitted):  # [2.3]
+            if strip(new_func, permitted):  # [5]
                 raise ValueError(f"Bad sign near '{strip(new_func, permitted)}' in '{func}'")
-            table[row_index] += [eval(new_func)]  # [2.4] 
+            table[row_index] += [eval(new_func)]  # [6] 
 
 Example:
 
