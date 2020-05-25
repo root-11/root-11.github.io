@@ -9,8 +9,8 @@ needs to be performed on each row.
 | # | A | B | C | D |
 |---|---|---|---|---|
 |1|123| 2 | 32|321|
-|2|133| 2 | 33|123|
-|3|143| 3 | 34|111|
+|2|133| 2.1 | 33|123|
+|3|143| 3.1e4 | 34|111|
 |4|163| 3 | 35|222|
 |5|143| 4 | 36|333|
 |6|123| 4 | 37|444|
@@ -29,13 +29,13 @@ We start with the table:
 
 
     table = {
-        0: ['A', 'B', 'C', 'D'],
-        1: [123, 2, 32, 321],
-        2: [133, 2.1, 33, 123],
-        3: [143, 3.1e4, 34, 111],
-        4: [163, 3, 35, 222],
-        5: [143, 4, 36, 333],
-        6: [123, 4, 37, 444],
+        0: ['A',   'B', 'C', 'D'],
+        1: [123,     2,  32, 321],
+        2: [133,   2.1,  33, 123],
+        3: [143, 3.1e4,  34, 111],
+        4: [163,     3,  35, 222],
+        5: [143,     4,  36, 333],
+        6: [123,     4,  37, 444],
     }
     
 
@@ -46,71 +46,98 @@ and the function provided by the user:
     new_column_name = "E"
 
 With the following filters, we can check the function by seeing
-if anything is left after pruning the function:
+if anything is left after pruning the function.
+
+First we need the filters, with the longest word first, so we don't accidentally
+remove a shorter word that is a sub-string in a longer word, like for example
+`round` which is permitted in `rounddown`:
     
     
     operators = {"max", "min", "int", "round", "+", "-", "/", "*", "(", ")", " ", ",", "'", '"'}
-    numbers = set('1234567890e.')
-    permitted = list(operators) + list(numbers)
-    
+    operators.sort(key=lambda x: len(x), reverse=True)  # guarantees longest word first.
+    numbers = list('1234567890e.')
+    permitted = operators + numbers
+
+The pruning function is straight forward:
+
+    def strip(text, replacements):
+        for word in replacements:
+            text = text.replace(word, "")
+            if not text:
+                break
+        return text
+
+Now we can check the function and raise a value error if it is malformed:
+
     table_headers = table[0]
     
-    remainder = func
-    for word in table_headers + permitted:
-        remainder = remainder.replace(word, "")
+    remainder = strip(func)
     if remainder:
         raise ValueError(f"Bad sign near '{remainder}' in '{func}'")
 
 
-At this point we know the function is not malicious, but we don't know if any
+At this point we now know the function is not malicious, but we don't know if any
 combination of column names and data can produce malicious content.
 
 To process the rows, we will therefore have to substitute each heading with data
-and check it in the same manner:
+and check it in the same manner. To do so we need a short helper:
+
+    def replace(text, dictionary):
+        for k, v in dictionary.items():
+            text = text.replace(k, str(v))
+        return text
 
 
-    for row_index in table:
-        if row_index == 0:
-            table[0] = table[0] + [new_column_name]
-            continue
-        row = table[row_index]
+The user defined function can now be processed by:
+
+1. checking the UDF for invalid content.
+2. processing each row, by:
+  1. replacing the headers to values from the row.
+  2. getting rid of the remaining text marks.
+  3. check that no malicious content is left in the string
+  4. evaluate the string as if it was math and update the table with the calculated value.
+
+Like this:
+
+   
+    def evaluate_custom_expression(user_defined_function, new_column_name, table):
+        """
+        :param user_defined_function: string
+        :param new_column_name: string
+        :param table: dictionary {row: list of values}
+        """
+ 
+        # [1]       
+        table_headers = table[0]   
+        table[0] += [new_column_name]
+
+        remainder = strip(user_defined_function, table_headers + permitted)
+        if remainder:
+            raise ValueError(f"Bad sign near '{strip(func, table_headers + permitted)}' in '{user_defined_function}'")
     
-        data = {k: str(v) for k, v in zip(table_headers, row)}
-        # example data = {'A': 123, 'B': 2, 'C': 32, 'D': 321}
-    
-        # 1. replace column names with values
-        new_func = func
-        for k, v in data.items():
-            new_func = new_func.replace(k, str(v))
-    
-        # 2. remove text marks.
-        new_func = new_func.replace("'", "").replace('"', '')
-    
-        # 3. we check that no malicious content is left in the string
-        # for example a malicious user could put insert `sys.exit()` maliciously.
-    
-        c = new_func.replace(" ", "")
-        for word in permitted:  # systematically remove the longest word first.
-            c = c.replace(word, "")
-            if not c:
-                break
-        if c:  # it's not safe!
-            raise ValueError(f"Bad sign near '{c}' in '{func}'")
-    
-        # 4. we use pythons interpreter to evaluate the string as if it was math.
-        table[row_index] = row + [eval(new_func)]
-    
+        # [2]
+        for row_index in (i for i in table if i > 0):
+            data = {k: str(v) for k, v in zip(table_headers, table[row_index])}  # [2.1]  
+            new_func = strip(replace(func, data), ["'", '"'])  # [2.2]
+       
+            if strip(new_func, permitted):  # [2.3]
+                raise ValueError(f"Bad sign near '{strip(new_func, permitted)}' in '{func}'")
+            table[row_index] += [eval(new_func)]  # [2.4] 
+
+Example:
+
+    evaluate_custom_expression(func, new_column_name, table)
     for k, v in table.items():
         print(k, ":", v)
 
     # outputs:
-    # 0 : ['A', 'B', 'C', 'D', 'E']
-    # 1 : [123, 2, 32, 321, 36.642276422764226]
-    # 2 : [133, 2, 33, 123, 35.954887218045116]
-    # 3 : [143, 3, 34, 111, 37.80419580419581]
-    # 4 : [163, 3, 35, 222, 39.38650306748466]
-    # 5 : [143, 4, 36, 333, 42.35664335664335]
-    # 6 : [123, 4, 37, 444, 44.642276422764226]
+    0 : ['A', 'B', 'C', 'D', 'E']
+    1 : [123, 2, 32, 321, 36.642276422764226]
+    2 : [133, 2.1, 33, 123, 36.05263157894737]
+    3 : [143, 31000.0, 34, 111, 31250.81118881119]
+    4 : [163, 3, 35, 222, 39.38650306748466]
+    5 : [143, 4, 36, 333, 42.35664335664335]
+    6 : [123, 4, 37, 444, 44.642276422764226]
 
 
 

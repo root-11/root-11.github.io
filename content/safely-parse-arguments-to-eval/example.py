@@ -14,51 +14,52 @@ func = "(int(round(('A'*'B)+('C'*'A') + 4, 0)) + max('D, 'B))/'A'"
 new_column_name = "E"
 
 # our filters:
-operators = {"max", "min", "int", "round", "+", "-", "/", "*", "(", ")", " ", ",", "'", '"'}
-numbers = set('1234567890e.')
-permitted = list(operators) + list(numbers)
+operators = ["max", "min", "int", "round", "+", "-", "/", "*", "(", ")", " ", ",", "'", '"']
+operators.sort(key=lambda x: len(x), reverse=True)  # systematically remove the longest word first.
+numbers = list('1234567890e.')
+permitted = operators + numbers
 
-# 1. first check the function:
-table_headers = table[0]
 
-remainder = func
-for word in table_headers + permitted:
-    remainder = remainder.replace(word, "")
-if remainder:
-    raise ValueError(f"Bad sign near '{remainder}' in '{func}'")
-
-# 2. now process the rows.
-for row_index in table:
-    if row_index == 0:
-        table[0] = table[0] + [new_column_name]
-        continue
-    row = table[row_index]
-
-    data = {k: str(v) for k, v in zip(table_headers, row)}
-    # example data = {'A': 123, 'B': 2, 'C': 32, 'D': 321}
-
-    # 1. replace column names with values
-    new_func = func
-    for k, v in data.items():
-        new_func = new_func.replace(k, str(v))
-
-    # 2. remove text marks.
-    new_func = new_func.replace("'", "").replace('"', '')
-
-    # 3. we check that no malicious content is left in the string
-    # for example a malicious user could put insert `sys.exit()` maliciously.
-
-    c = new_func.replace(" ", "")
-    for word in permitted:  # systematically remove the longest word first.
-        c = c.replace(word, "")
-        if not c:
+def strip(text, replacements):
+    for word in replacements:
+        text = text.replace(word, "")
+        if not text:
             break
-    if c:  # it's not safe!
-        raise ValueError(f"Bad sign near '{c}' in '{func}'")
+    return text
 
-    # 4. we use pythons interpreter to evaluate the string as if it was math.
-    table[row_index] = row + [eval(new_func)]
 
+def replace(text, dictionary):
+    for k, v in dictionary.items():
+        text = text.replace(k, str(v))
+    return text
+
+
+def evaluate_custom_expression(user_defined_function, new_column_name, table):
+    """
+    :param user_defined_function:
+    :param new_column_name:
+    :param table:
+    :return:
+    """
+
+    table_headers = table[0]
+    table[0] += [new_column_name]
+
+    remainder = strip(user_defined_function, table_headers + permitted)
+    if remainder:
+        raise ValueError(f"Bad sign near '{strip(func, table_headers + permitted)}' in '{user_defined_function}'")
+
+    for row_index in (i for i in table if i > 0):
+        data = {k: str(v) for k, v in zip(table_headers, table[row_index])}
+        new_func = strip(replace(func, data), ["'", '"'])  # replace column names with values and remove text marks.
+
+        if strip(new_func, permitted):  # check that no malicious content is left in the string
+            raise ValueError(f"Bad sign near '{strip(new_func, permitted)}' in '{func}'")
+
+        table[row_index] += [eval(new_func)]  # evaluate the string as if it was math.
+
+
+evaluate_custom_expression(func, new_column_name, table)
 for k, v in table.items():
     print(k, ":", v)
 
