@@ -1,5 +1,5 @@
 Determining the convex hull is useful for many applications, such as linear 
-programming, where the convex hull declares the boundadry of the solution 
+programming, where the convex hull declares the boundary of the solution 
 landscape. In graph theory the convex hull can illustrate the shortest path 
 around nodes and hence be used to determine clusters and overlaps between sets 
 of nodes.
