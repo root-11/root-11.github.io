@@ -25,7 +25,7 @@ I find that a lot of people read through assignments, documents and emails witho
 clarity of what the problem is. They try to hold as many little details in memory
 and develop a comprehensive mental map of what is going on in a report or 
 assignment context. And then they loose the aim through mental exhaustion. 
-I'm an astute observer, but no neuroscienists, so I can't say
+I'm an astute observer, but no neuro-scienists, so I can't say
 why this happens. Only that it is observable with almost every assignment.
 
 So I recommend to read through the available material with a single goal in mind:
@@ -55,7 +55,7 @@ problem at hand.
 
 The worst meetings end with everyone going off doing the thing they think is 
 most important, without a systematic coordination of efforts. My worst experience
-in this regard came from EU-funded work, where a consortium of companies with 
+in this regard came from an EU-funded project, where a consortium of companies with 
 poorly aligned interests (aside from justifying the EU spend) sought to solve 
 an otherwise well defined problem.
 
