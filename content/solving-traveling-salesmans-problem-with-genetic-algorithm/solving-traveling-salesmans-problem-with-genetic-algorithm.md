@@ -2,7 +2,7 @@ Understanding the principles of genes and mutation as the driving mechanism
 for evolution is common today. Less common is the availability of a minimal
 viable [example](example.py), that showcases the method.  
 So here's an example I've used to enlighten friends, where I deliberately
-deviate from pep-8 to only introduce imports when they're needed.
+deviate from pep-8 to introduce imports only when they're needed.
 
 
 To solve the Traveling Salesmans Problem (TSP), we need cities to travel to, 
