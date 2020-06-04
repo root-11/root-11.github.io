@@ -4,7 +4,7 @@ from flask import Flask
 server = None
 
 
-class TestServer(object):
+class Server(object):
     def __init__(self):
         self._app = Flask(__name__)
         self._app.add_url_rule(rule='/', view_func=self.index, methods=['GET'])
@@ -35,7 +35,7 @@ class Client(object):
 
 def setup():
     global server
-    server = TestServer()
+    server = Server()
     Client.setup(server)
 
 
@@ -54,12 +54,3 @@ def test_hello_me():
     reply = client.post('/hello/me')
     assert "me" in reply.data.decode()
 
-
-def run():
-    setup()
-    for k,v in sorted(globals().items()):
-        if callable(v) and k.startswith('test'):
-            v()
-    teardown()
-
-run()
