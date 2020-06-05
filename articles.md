@@ -2,6 +2,7 @@ This is my personal website, where you can find code and solutions to problems I
 
 date | article 
 ---|---
+2020-06-05:| [Notes on optimisation strategies](content/notes-on-optimisation-strategies/index.html)
 2020-05-31:| [Graph-theory - a reference imlementation](content/graph-theory/index.html)
 2020-05-28:| [Problem structure keywords and content (or how to solve any problem)](content/problem-structure-keywords-content/index.html)
 2020-05-23:| [Calculating the convex hull](content/calculating-the-convex-hull/index.html)
@@ -12,3 +13,4 @@ date | article
 2020-05-11:| [Brute force solution to the knapsack problem](content/brute-force-solution-to-the-knapsack-problem/index.html) 
 2020-05-07:| [Automating test generation](content/automating-test-generation/index.html) 
 2020-05-06:| [Maslite](content/maslite/index.html) 
+
