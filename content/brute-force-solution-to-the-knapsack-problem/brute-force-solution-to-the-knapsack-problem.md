@@ -1,10 +1,7 @@
-Computing the brute force solution is rarely the best way to go except when checking
-other solvers. However as running the test suite can be time consuming, it's nice to 
-have tools that run reasonably quickly.
+Computing the brute force solution is rarely the best way to go except when checking other solvers. However, as running the test suite can be time-consuming, it's nice to have tools that run reasonably quickly.
 
-The knapsack problem is an optimisation problem seeking to pack a container with the 
-combination of items, so that the weight or volume constraints are respected and the
-value of the items in the pack is maximised.
+The knapsack problem is an optimisation problem where a combination of items must respect weight or volume constraints and have the highest possible value.
+
 
 To test a solver for the knapsack problem it is helpful to generate all unique combinations
 of items, so that the evalution is exhaustive. I will refer to this `set` as the 

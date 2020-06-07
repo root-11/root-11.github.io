@@ -1,21 +1,20 @@
-It's often a challenge to assure that tests cover all combinations of inputs when they're written by hand.
-The logical thing is therefore NOT to write them by hand. Let python do that for you.
+When writing tests by hand, it's often a challenge to cover all combinations of inputs.
+So don't. Let python do that for you.
 
 Here's an example.  
-I have a function, that I'd like to test for various inputs. It works for what I intended, but I'd like to check.
-In addition I'd like to see all the cases where the code raises an exception.
+I have a function that I'd like to test for various inputs. It works for what I intended, 
+but I'd like to check all the cases where the code raises an exception.
 
     def adder(a, b):  # function to test.
         """ adds a to b"""
         return a + b
 
  
-the input options are integers, floats, lists and strings:
+The input options are integers, floats, lists and strings:
 
     options = [9, 9.0, [9], "9"] 
 
-I also need a template that reflects the test I would write, should I have written it by hand. This is a string akin
-to this:
+I also need a template that reflects the test I would write, should I have written it by hand:
 
     test_template = """
     
@@ -23,7 +22,7 @@ to this:
         _ = adder{}
     """
 
-With these 3 components, I can now generate my tests automatically and write any that fail out automatically.
+With these three components, I can now generate my tests automatically and write any that fail out automatically.
  
     from pathlib import Path
     from itertools import product
@@ -41,7 +40,8 @@ With these 3 components, I can now generate my tests automatically and write any
                     fo.write(new_test)
 
 
-When the function `test_discovery`, above, is called, it will **append** the tests that raise `exeception`, like this:
+When the function `test_discovery`, above, is called, it will **append** the tests that 
+raise `exception`, like this:
 
     test_discovery() 
     
@@ -86,7 +86,8 @@ When the function `test_discovery`, above, is called, it will **append** the tes
         _ = adder('9', [9])
 
 
-As you may notice the test name numbers are not chronological, as the tests that pass have not been written.
+As you may notice, the test name numbers are not chronological, as the tests that 
+pass have not been written.
 
 Neat he? 
 

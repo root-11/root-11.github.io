@@ -18,28 +18,27 @@
     <br><br>
     <div style="margin-bottom: 3ch;text-transform: none;"></div>
 
-<div style="margin-bottom: 3ch;text-transform: none;">2020-05-17</div><div class="heading">automating test generation</div><hr/>
-<p>It's often a challenge to assure that tests cover all combinations of inputs when they're written by hand.
-The logical thing is therefore NOT to write them by hand. Let python do that for you.</p>
+<div style="margin-bottom: 3ch;text-transform: none;">2020-06-07</div><div class="heading">automating test generation</div><hr/>    
+<p>When writing tests by hand, it's often a challenge to cover all combinations of inputs.
+So don't. Let python do that for you.</p>
 <p>Here's an example.<br />
-I have a function, that I'd like to test for various inputs. It works for what I intended, but I'd like to check.
-In addition I'd like to see all the cases where the code raises an exception.</p>
+I have a function that I'd like to test for various inputs. It works for what I intended, 
+but I'd like to check all the cases where the code raises an exception.</p>
 <pre><code>def adder(a, b):  # function to test.
     """ adds a to b"""
     return a + b
 </code></pre>
-<p>the input options are integers, floats, lists and strings:</p>
+<p>The input options are integers, floats, lists and strings:</p>
 <pre><code>options = [9, 9.0, [9], "9"]
 </code></pre>
-<p>I also need a template that reflects the test I would write, should I have written it by hand. This is a string akin
-to this:</p>
+<p>I also need a template that reflects the test I would write, should I have written it by hand:</p>
 <pre><code>test_template = """
 
 def test_adder_{}():
     _ = adder{}
 """
 </code></pre>
-<p>With these 3 components, I can now generate my tests automatically and write any that fail out automatically.</p>
+<p>With these three components, I can now generate my tests automatically and write any that fail out automatically.</p>
 <pre><code>from pathlib import Path
 from itertools import product
 
@@ -55,7 +54,8 @@ def test_discovery():
             with Path(__file__).open('a') as fo:  # appending the test to this script.
                 fo.write(new_test)
 </code></pre>
-<p>When the function <code>test_discovery</code>, above, is called, it will <strong>append</strong> the tests that raise <code>exeception</code>, like this:</p>
+<p>When the function <code>test_discovery</code>, above, is called, it will <strong>append</strong> the tests that 
+raise <code>exception</code>, like this:</p>
 <pre><code>test_discovery()
 
 
@@ -98,7 +98,8 @@ def test_adder_14():
 def test_adder_15():
     _ = adder('9', [9])
 </code></pre>
-<p>As you may notice the test name numbers are not chronological, as the tests that pass have not been written.</p>
+<p>As you may notice, the test name numbers are not chronological, as the tests that 
+pass have not been written.</p>
 <p>Neat he? </p>
 <p>The code is available (as usual) in <a href="example.py">example.py</a></p>
 
