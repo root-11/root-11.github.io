@@ -32,6 +32,8 @@ class DataTypes(object):
     decimal = float
     boolean = bool
     integer = int
+
+    # reserved keyword for None in JavaScript:
     none = 'null'
 
     @staticmethod
@@ -169,8 +171,10 @@ assert c != Column('A', str, False)
 
 
 class Table(object):
+
     def __init__(self):
         self.columns = {}
+        self.metadata = {}
 
     def __eq__(self, other):
         if not isinstance(other, Table):
@@ -250,11 +254,13 @@ class Table(object):
         return t
 
     def __delattr__(self, item):
+        """ delete column as a attribute """
         if item in self.columns:
             del self.columns[item]
         super().__delattr__(item)
 
     def __delitem__(self, key):
+        """ delete column as key """
         if key in self.columns:
             del self.columns[key]
             super().__delattr__(key)
@@ -274,6 +280,59 @@ class Table(object):
         for ix in range(len(self)):
             item = tuple(c[ix] if ix < len(c) else None for c in self.columns.values())
             yield item
+
+    def filter(self, *headers):
+        """ returns values in same order as headers. """
+        L = [self.columns[h] for h in headers]
+        for ix in range(len(self)):
+            item = tuple(c[ix] if ix < len(c) else None for c in L)
+            yield item
+
+    def all(self, **kwargs):
+        """
+        returns Table for rows where ALL kwargs match
+        :param kwargs: dictionary with headers and values/callable
+        """
+        d = kwargs
+        if not isinstance(d, dict):
+            raise TypeError("did you remember to add the ** in front of your dict?")
+
+        ixs = set(range(len(self)))
+        for k, v in d.items():
+            col = self.columns[k]
+            if callable(v):
+                ix2 = {ix for ix, r in enumerate(col) if v(r)}
+            else:
+                ix2 = {ix for ix, r in enumerate(col) if v == r}
+            ixs = ixs.intersection(ix2)
+
+        t = Table()
+        for col in self.columns.values():
+            t.add_column(col.header, col.datatype, col.allow_empty, [col[ix] for ix in ixs])
+        return t
+
+    def any(self, **kwargs):
+        """
+        returns Table for rows where ANY kwargs match
+        :param kwargs: dictionary with headers and values
+        """
+        d = kwargs
+        if not isinstance(d, dict):
+            raise TypeError("did you remember to add the ** in front of your dict?")
+
+        ixs = set()
+        for k, v in d.items():
+            col = self.columns[k]
+            if callable(v):
+                ix2 = {ix for ix, r in enumerate(col) if v(r)}
+            else:
+                ix2 = {ix for ix, r in enumerate(col) if v == r}
+            ixs.update(ix2)
+
+        t = Table()
+        for col in self.columns.values():
+            t.add_column(col.header, col.datatype, col.allow_empty, [col[ix] for ix in ixs])
+        return t
 
 
 # creating a table incrementally is straight forward:
@@ -324,6 +383,22 @@ assert table != table2
 # append is easy:
 _ = [table2.add_row(row) for row in table.rows]
 
+before = [r for r in table2.rows]
+assert before == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
+
+# as is filtering for ALL that match:
+filter_1 = lambda x: 'llo' in x
+filter_2 = lambda x: x is not None
+
+after = table2.all(**{'B': filter_1, 'A': filter_2})
+
+assert [r for r in after.rows] ==[(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+
+# as is filtering or for ANY that match:
+after = table2.any(**{'B': filter_1, 'A': filter_2})
+
+assert [r for r in after.rows] == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
+
 # slicing is easy:
 table_chunk = table2[2:4]
 assert isinstance(table_chunk, Table)
@@ -332,11 +407,11 @@ assert isinstance(table_chunk, Table)
 table2.add_column('B', int, allow_empty=True)
 assert set(table2.columns) == {'A', 'B', 'B_1'}
 
-# you can delete a column as attribute:
+# you can delete a column as attribute...
 del table2.B_1
 assert set(table2.columns) == {'A', 'B'}
 
-# or as key
+# ... or using the header as key
 del table2['A']
 assert set(table2.columns) == {'B'}
 
@@ -356,6 +431,7 @@ table.A = [f(r) for r in table.A]
 try:
     f = lambda x: f"'{x} as text'"
     table.A = [f(r) for r in table.A]
+    assert False, "The line above must raise a TypeError"
 except TypeError as error:
     print("The error is:", str(error))
 
@@ -369,7 +445,7 @@ now = datetime.now()
 
 table4 = Table()
 table4.add_column('A', int, False, data=[-1, 1])
-table4.add_column('A', int, True, data=[None, 1])
+table4.add_column('A', int, True, data=[None, 1])  # None!
 table4.add_column('A', DataTypes.integer, False, data=[-1, 1])
 table4.add_column('A', float, False, data=[-1.1, 1.1])
 table4.add_column('A', DataTypes.decimal, False, data=[-1.1, 1.1])
@@ -387,7 +463,10 @@ table5 = Table.from_json(table4_json)
 # .. to json and back.
 assert table4 == table5
 
-
+# And finally: I can add metadata:
+table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
+                                 'A_2': 'product.sku',
+                                 'A_4': 'locations.sender'}
 
 
 
