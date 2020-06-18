@@ -16,6 +16,7 @@
 import zlib
 import json
 from itertools import count
+from datetime import datetime, date, time
 
 
 class DataTypes(object):
@@ -23,11 +24,57 @@ class DataTypes(object):
     float = float
     bool = bool
     int = int
+    date = date
+    time = time
+    datetime = datetime
     # alias for private labels
     text = str
     decimal = float
     boolean = bool
     integer = int
+    none = 'null'
+
+    @staticmethod
+    def to_json(v):
+        if v is None:
+            return DataTypes.none
+        if isinstance(v, int):
+            return v
+        elif isinstance(v, str):
+            return v
+        elif isinstance(v, float):
+            return v
+        elif isinstance(v, bool):
+            return str(v)
+        elif isinstance(v, date):
+            return v.isoformat()
+        elif isinstance(v, time):
+            return v.isoformat()
+        elif isinstance(v, datetime):
+            return v.isoformat()
+        else:
+            raise TypeError(f"The datatype {type(v)} is not supported.")
+
+    @staticmethod
+    def from_json(v, dtype):
+        if v == DataTypes.none:
+            return None
+        if dtype is int:
+            return int(v)
+        elif dtype is str:
+            return str(v)
+        elif dtype is float:
+            return float(v)
+        elif dtype is bool:
+            return bool(v)
+        elif dtype is date:
+            return date.fromisoformat(v)
+        elif dtype is datetime:
+            return datetime.fromisoformat(v)
+        elif dtype is time:
+            return time.fromisoformat(v)
+        else:
+            raise TypeError(f"The datatype {str(dtype)} is not supported.")
 
 
 class Column(list):
@@ -68,20 +115,22 @@ class Column(list):
             'header': self.header,
             'datatype': self.datatype.__name__,
             'allow_empty': self.allow_empty,
-            'data': json.dumps([v for v in self])
+            'data': json.dumps([DataTypes.to_json(v) for v in self])
         })
 
     @classmethod
     def from_json(cls, json_):
         j = json.loads(json_)
-        j['datatype'] = getattr(DataTypes, j['datatype'])
-        j['data'] = json.loads(j['data'])
+        j['datatype'] = dtype = getattr(DataTypes, j['datatype'])
+        j['data'] = [DataTypes.from_json(v, dtype) for v in json.loads(j['data'])]
         return Column(**j)
 
     def type_check(self, value):
         """ helper that does nothing unless it raises an exception. """
-        if value is None and self.allow_empty is False:
-            raise ValueError("None is not permitted.")
+        if value is None:
+            if not self.allow_empty:
+                raise ValueError("None is not permitted.")
+            return
         if not isinstance(value, self.datatype):
             raise TypeError(f"{value} is not of type {self.datatype}")
 
@@ -138,11 +187,16 @@ class Table(object):
 
     def __copy__(self):
         t = Table()
-        t.columns = {k: v.copy() for k,v in self.columns.items()}
+        t.columns = {k: v.copy() for k, v in self.columns.items()}
         return t
 
     def __str__(self):
-        return f"<{self.__class__.__name__}> {len(self.columns)} columns x {len(self)} rows"
+        variation = ""
+        lengths = {k: len(v) for k, v in self.columns.items()}
+        if set(lengths.values()) != 1:
+            longest_col = max(lengths.values())
+            variation = f"(except {', '.join([f'{k}({v})' for k,v in lengths.items() if v < longest_col])})"
+        return f"<{self.__class__.__name__}> {len(self.columns)} columns x {len(self)} rows {variation}"
 
     def copy(self):
         return self.__copy__()
@@ -195,6 +249,18 @@ class Table(object):
             t.add_column(col.header, col.datatype, col.allow_empty, col[start:stop:step])
         return t
 
+    def __delattr__(self, item):
+        if item in self.columns:
+            del self.columns[item]
+        super().__delattr__(item)
+
+    def __delitem__(self, key):
+        if key in self.columns:
+            del self.columns[key]
+            super().__delattr__(key)
+        else:
+            raise KeyError(f"key not found")
+
     def __setattr__(self, name, value):
         if hasattr(self, name):
             if name in self.columns and isinstance(value, list):
@@ -218,13 +284,17 @@ assert hasattr(table, 'A')
 table.add_column('B', str, allow_empty=False)
 assert hasattr(table, 'B')
 
-# adding rows is easy:
+# appending rows is easy:
 table.add_row((1, 'hello'))
 table.add_row((2, 'world'))
 
 # converting to and from json is easy:
 table_as_json = table.to_json()
 table2 = Table.from_json(table_as_json)
+
+zipped = zlib.compress(table_as_json.encode())
+a, b = len(zipped), len(table_as_json)
+print("zipping reduces to", a, "from", b, "bytes, e.g.", round(100 * a / b, 0), "% of original")
 
 # copying is easy:
 table3 = table.copy()
@@ -233,10 +303,8 @@ table3 = table.copy()
 assert 'A' in table.columns
 assert 'Z' not in table.columns
 
-
 # comparisons are straight forward:
 assert table == table2 == table3
-
 
 # type verification is included:
 try:
@@ -245,7 +313,6 @@ try:
 except TypeError:
     assert True
 
-
 # updating values is familiar to any user who likes a list:
 assert hasattr(table, 'A')
 assert isinstance(table.A, list)
@@ -253,10 +320,6 @@ table.A[1] = 44
 table.B[1] = "Hallo"
 
 assert table != table2
-
-zipped = zlib.compress(table_as_json.encode())
-a, b = len(zipped), len(table_as_json)
-print("zipping reduces to", a, "from", b, "bytes, e.g.", round(100 * a / b, 0), "% of original")
 
 # append is easy:
 _ = [table2.add_row(row) for row in table.rows]
@@ -268,6 +331,14 @@ assert isinstance(table_chunk, Table)
 # we will handle duplicate names gracefully.
 table2.add_column('B', int, allow_empty=True)
 assert set(table2.columns) == {'A', 'B', 'B_1'}
+
+# you can delete a column as attribute:
+del table2.B_1
+assert set(table2.columns) == {'A', 'B'}
+
+# or as key
+del table2['A']
+assert set(table2.columns) == {'B'}
 
 # adding a computed column is easy:
 table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
@@ -283,12 +354,40 @@ table.A = [f(r) for r in table.A]
 
 # and it will tell you if you're not allowed:
 try:
-    f = lambda x: f"{type(x)}"
+    f = lambda x: f"'{x} as text'"
     table.A = [f(r) for r in table.A]
 except TypeError as error:
-    print(error)
+    print("The error is:", str(error))
 
 # using regular indexing will also work.
 for ix, r in enumerate(table.A):
     table.A[ix] = r * 10
+
+
+# works with all datatypes:
+now = datetime.now()
+
+table4 = Table()
+table4.add_column('A', int, False, data=[-1, 1])
+table4.add_column('A', int, True, data=[None, 1])
+table4.add_column('A', DataTypes.integer, False, data=[-1, 1])
+table4.add_column('A', float, False, data=[-1.1, 1.1])
+table4.add_column('A', DataTypes.decimal, False, data=[-1.1, 1.1])
+table4.add_column('A', str, False, data=["", "1"])
+table4.add_column('A', DataTypes.text, False, data=["", "1"])
+table4.add_column('A', bool, False, data=[False, True])
+table4.add_column('A', DataTypes.boolean, False, data=[False, True])
+table4.add_column('A', datetime, False, data=[now, now])
+table4.add_column('A', date, False, data=[now.date(), now.date()])
+table4.add_column('A', time, False, data=[now.time(), now.time()])
+
+table4_json = table4.to_json()
+table5 = Table.from_json(table4_json)
+
+# .. to json and back.
+assert table4 == table5
+
+
+
+
 
