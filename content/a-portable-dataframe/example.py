@@ -101,13 +101,22 @@ class Column(list):
         super().__setitem__(key, value)
 
 
+# creating a column remains easy:
 c = Column('A', int, False)
+
+# so does adding values:
 c.append(44)
 c.append(44)
 assert len(c) == 2
+
+# and converting to and from json
 d = c.to_json()
 c2 = Column.from_json(d)
 assert len(c2) == 2
+
+# comparing columns is easy:
+assert c == c2
+assert c != Column('A', str, False)
 
 
 class Table(object):
@@ -156,7 +165,7 @@ class Table(object):
         new_header = header
         counter = count(start=1)
         while hasattr(self, new_header):
-            new_header = f"{header}{next(counter)}"  # valid attr names must be ascii.
+            new_header = f"{header}_{next(counter)}"  # valid attr names must be ascii.
         return new_header
 
     def add_column(self, header, datatype, allow_empty=False, data=None):
@@ -220,6 +229,11 @@ table2 = Table.from_json(table_as_json)
 # copying is easy:
 table3 = table.copy()
 
+# and checking for headers is simple:
+assert 'A' in table.columns
+assert 'Z' not in table.columns
+
+
 # comparisons are straight forward:
 assert table == table2 == table3
 
@@ -253,7 +267,7 @@ assert isinstance(table_chunk, Table)
 
 # we will handle duplicate names gracefully.
 table2.add_column('B', int, allow_empty=True)
-assert set(table2.columns) == {'A', 'B', 'B1'}
+assert set(table2.columns) == {'A', 'B', 'B_1'}
 
 # adding a computed column is easy:
 table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
