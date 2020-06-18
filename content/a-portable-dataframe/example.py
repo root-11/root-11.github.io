@@ -301,10 +301,14 @@ class Table(object):
         for k, v in d.items():
             col = self.columns[k]
             if callable(v):
-                ix2 = {ix for ix, r in enumerate(col) if v(r)}
+                ix2 = {ix for ix in ixs if v(col[ix])}
             else:
-                ix2 = {ix for ix, r in enumerate(col) if v == r}
-            ixs = ixs.intersection(ix2)
+                ix2 = {ix for ix in ixs if v == col[ix]}
+
+            if ixs is None:
+                ixs = ix2
+            else:
+                ixs = ixs.intersection(ix2)
 
         t = Table()
         for col in self.columns.values():
@@ -388,16 +392,16 @@ assert before == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
 
 # as is filtering for ALL that match:
 filter_1 = lambda x: 'llo' in x
-filter_2 = lambda x: x is not None
+filter_2 = lambda x: x > 3
 
 after = table2.all(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] ==[(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+assert [r for r in after.rows] == [(44, 'Hallo')]
 
 # as is filtering or for ANY that match:
 after = table2.any(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
+assert [r for r in after.rows] == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
 
 # slicing is easy:
 table_chunk = table2[2:4]
