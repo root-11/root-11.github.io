@@ -191,7 +191,9 @@ class Table(object):
 
     def __copy__(self):
         t = Table()
-        t.columns = {k: v.copy() for k, v in self.columns.items()}
+        for col in self.columns.values():
+            t.add_column(col.header, col.datatype, col.allow_empty, data=col[:])
+        t.metadata = self.metadata.copy()
         return t
 
     def __str__(self):
@@ -275,6 +277,43 @@ class Table(object):
                 return
         super().__setattr__(name, value)
 
+    def compare(self, other):
+        """ compares the metadata of two tables."""
+        if not isinstance(other, Table):
+            a, b = self.__class__.__name__, other.__class__.__name__
+            raise TypeError(f"cannot compare type {b} with {a}")
+
+        if self.metadata != other.metadata:
+            raise ValueError("tables have different metadata.")
+        for a, b in [[self, other], [other, self]]:  # check both dictionaries.
+            for name, col in a.columns.items():
+                if name not in b.columns:
+                    raise ValueError(f"Column {name} not in other")
+                col2 = b.columns[name]
+                if col.datatype != col2.datatype:
+                    raise ValueError(f"Column {name}.datatype different")
+                if col.allow_empty != col2.allow_empty:
+                    raise ValueError(f"Column {name}.allow_empty is different")
+
+    def __iadd__(self, other):
+        """ allows Table_1 += Table_2 """
+        self.compare(other)
+        for h, col in self.columns.items():
+            c2 = other.columns[h]
+            col.extend(c2[:])
+        return self
+
+    def __add__(self, other):
+        """ allows Table_3 = Table_1 + Table_2 """
+        self.compare(other)
+
+        t_out = self.copy()
+
+        for h, col in t_out.columns.items():
+            c2 = other.columns[h]
+            col.extend(c2[:])
+        return t_out
+
     @property
     def rows(self):
         for ix in range(len(self)):
@@ -291,41 +330,51 @@ class Table(object):
     def all(self, **kwargs):
         """
         returns Table for rows where ALL kwargs match
-        :param kwargs: dictionary with headers and values/callable
+        :param kwargs: dictionary with headers and values / boolean callable
         """
-        d = kwargs
-        if not isinstance(d, dict):
+        if not isinstance(kwargs, dict):
             raise TypeError("did you remember to add the ** in front of your dict?")
+        if not all(k in self.columns for k in kwargs):
+            raise ValueError(f"Unkonwn column(s): {[k for k in kwargs if k not in self.columns]}")
 
-        ixs = set(range(len(self)))
-        for k, v in d.items():
+        ixs = None
+        for k, v in kwargs.items():
             col = self.columns[k]
-            if callable(v):
-                ix2 = {ix for ix in ixs if v(col[ix])}
-            else:
-                ix2 = {ix for ix in ixs if v == col[ix]}
+            if ixs is None:  # first header.
+                if callable(v):
+                    ix2 = {ix for ix, i in enumerate(col) if v(i)}
+                else:
+                    ix2 = {ix for ix, i in enumerate(col) if v == i}
 
-            if ixs is None:
+            else:  # remaining headers.
+                if callable(v):
+                    ix2 = {ix for ix in ixs if v(col[ix])}
+                else:
+                    ix2 = {ix for ix in ixs if v == col[ix]}
+
+            if not isinstance(ixs, set):
                 ixs = ix2
             else:
                 ixs = ixs.intersection(ix2)
 
+            if not ixs:  # There are no matches.
+                break
+
         t = Table()
         for col in self.columns.values():
-            t.add_column(col.header, col.datatype, col.allow_empty, [col[ix] for ix in ixs])
+            t.add_column(col.header, col.datatype, col.allow_empty, data=[col[ix] for ix in ixs])
         return t
 
     def any(self, **kwargs):
         """
         returns Table for rows where ANY kwargs match
-        :param kwargs: dictionary with headers and values
+        :param kwargs: dictionary with headers and values / boolean callable
         """
-        d = kwargs
-        if not isinstance(d, dict):
+        if not isinstance(kwargs, dict):
             raise TypeError("did you remember to add the ** in front of your dict?")
 
         ixs = set()
-        for k, v in d.items():
+        for k, v in kwargs.items():
             col = self.columns[k]
             if callable(v):
                 ix2 = {ix for ix, r in enumerate(col) if v(r)}
@@ -335,7 +384,7 @@ class Table(object):
 
         t = Table()
         for col in self.columns.values():
-            t.add_column(col.header, col.datatype, col.allow_empty, [col[ix] for ix in ixs])
+            t.add_column(col.header, col.datatype, col.allow_empty, data=[col[ix] for ix in ixs])
         return t
 
 
@@ -368,6 +417,17 @@ assert 'Z' not in table.columns
 
 # comparisons are straight forward:
 assert table == table2 == table3
+
+# even if you only want to check metadata:
+table.compare(table3)  # will raise exception if they're different.
+
+# + also work:
+table3x2 = table3 + table3
+assert len(table3x2) == len(table3) * 2
+
+# and so does +=
+table3x2 += table3
+assert len(table3x2) == len(table3) * 3
 
 # type verification is included:
 try:
@@ -402,6 +462,30 @@ assert [r for r in after.rows] == [(44, 'Hallo')]
 after = table2.any(**{'B': filter_1, 'A': filter_2})
 
 assert [r for r in after.rows] == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+
+# Imagine a table with columns a,b,c,d,e (all integers) like this:
+t = Table()
+_ = [t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)]) for c in 'abcde']
+
+# we want to add two new columns using the functions:
+def f1(a,b,c): return a+b+c+1
+def f2(b,c,d): return b*c*d
+
+# and we want to compute two new columns 'f' and 'g':
+t.add_column(header='f', datatype=int, allow_empty=False)
+t.add_column(header='g', datatype=int, allow_empty=True)
+
+# we can now use the filter, to iterate over the table:
+
+for row in t.filter('a', 'b', 'c', 'd'):
+    a, b, c, d = row
+
+    # and add the values to the two new columns
+    t.f.append(f1(a, b, c))
+    t.g.append(f2(b, c, d))
+
+assert len(t) == 5
+assert len(t.columns) == len('abcdefg')
 
 # slicing is easy:
 table_chunk = table2[2:4]
@@ -471,6 +555,7 @@ assert table4 == table5
 table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
                                  'A_2': 'product.sku',
                                  'A_4': 'locations.sender'}
+
 
 
 
