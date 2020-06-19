@@ -17,6 +17,7 @@ import zlib
 import json
 from itertools import count
 from datetime import datetime, date, time
+from collections import defaultdict
 
 
 class DataTypes(object):
@@ -103,6 +104,7 @@ class Column(list):
             self.header == other.header,
             self.datatype == other.datatype,
             self.allow_empty == other.allow_empty,
+            len(self) == len(other),
             all(a == b for a, b in zip(self, other))
         ])
 
@@ -232,7 +234,6 @@ class Table(object):
         assert isinstance(header, str)
         header = self.check_for_duplicate_header(header)
         c = Column(header, datatype, allow_empty, data=data)
-        self.__setattr__(header, c)
         self.columns[header] = c
 
     def add_row(self, values):
@@ -243,29 +244,36 @@ class Table(object):
         for value, col in zip(values, self.columns.values()):
             col.append(value)
 
+    def __contains__(self, item):
+        return item in self.columns
+
     def __getitem__(self, item):
         """ returns rows as a tuple """
-        assert isinstance(item, slice)
-        start = 0 if item.start is None else item.start
-        step = 1 if item.step is None else item.step
-        stop = len(self.columns) if item.stop is None else item.stop
+        if isinstance(item, slice):
+            start = 0 if item.start is None else item.start
+            step = 1 if item.step is None else item.step
+            stop = len(self.columns) if item.stop is None else item.stop
 
-        t = Table()
-        for col in self.columns.values():
-            t.add_column(col.header, col.datatype, col.allow_empty, col[start:stop:step])
-        return t
+            t = Table()
+            for col in self.columns.values():
+                t.add_column(col.header, col.datatype, col.allow_empty, col[start:stop:step])
+            return t
+        else:
+            return self.columns[item]
 
-    def __delattr__(self, item):
-        """ delete column as a attribute """
-        if item in self.columns:
-            del self.columns[item]
-        super().__delattr__(item)
+    def __setitem__(self, key, value):
+        if key in self.columns and isinstance(value, list):
+            c = self.columns[key]
+            c.clear()
+            for v in value:
+                c.append(v)
+        else:
+            raise TypeError(f"Use add_column to add_column: {key}")
 
     def __delitem__(self, key):
         """ delete column as key """
         if key in self.columns:
             del self.columns[key]
-            super().__delattr__(key)
         else:
             raise KeyError(f"key not found")
 
@@ -391,10 +399,10 @@ class Table(object):
 # creating a table incrementally is straight forward:
 table = Table()
 table.add_column('A', int, False)
-assert hasattr(table, 'A')
+assert 'A' in table
 
 table.add_column('B', str, allow_empty=False)
-assert hasattr(table, 'B')
+assert 'B' in table
 
 # appending rows is easy:
 table.add_row((1, 'hello'))
@@ -412,8 +420,8 @@ print("zipping reduces to", a, "from", b, "bytes, e.g.", round(100 * a / b, 0), 
 table3 = table.copy()
 
 # and checking for headers is simple:
-assert 'A' in table.columns
-assert 'Z' not in table.columns
+assert 'A' in table
+assert 'Z' not in table
 
 # comparisons are straight forward:
 assert table == table2 == table3
@@ -431,16 +439,17 @@ assert len(table3x2) == len(table3) * 3
 
 # type verification is included:
 try:
-    table.A[1] = 'Hallo'
+    table.columns['A'][0] = 'Hallo'
     assert False, "A TypeError should have been raised."
 except TypeError:
     assert True
 
 # updating values is familiar to any user who likes a list:
-assert hasattr(table, 'A')
-assert isinstance(table.A, list)
-table.A[1] = 44
-table.B[1] = "Hallo"
+assert 'A' in table.columns
+assert isinstance(table.columns['A'], list)
+last_row = -1
+table['A'][last_row] = 44
+table['B'][last_row] = "Hallo"
 
 assert table != table2
 
@@ -481,8 +490,8 @@ for row in t.filter('a', 'b', 'c', 'd'):
     a, b, c, d = row
 
     # and add the values to the two new columns
-    t.f.append(f1(a, b, c))
-    t.g.append(f2(b, c, d))
+    t['f'].append(f1(a, b, c))
+    t['g'].append(f2(b, c, d))
 
 assert len(t) == 5
 assert len(t.columns) == len('abcdefg')
@@ -495,13 +504,9 @@ assert isinstance(table_chunk, Table)
 table2.add_column('B', int, allow_empty=True)
 assert set(table2.columns) == {'A', 'B', 'B_1'}
 
-# you can delete a column as attribute...
-del table2.B_1
+# you can delete a column as key...
+del table2['B_1']
 assert set(table2.columns) == {'A', 'B'}
-
-# ... or using the header as key
-del table2['A']
-assert set(table2.columns) == {'B'}
 
 # adding a computed column is easy:
 table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
@@ -513,19 +518,20 @@ for row in table.rows:
 
 # updating a column with a function is easy:
 f = lambda x: x * 10
-table.A = [f(r) for r in table.A]
+table['A'] = [f(r) for r in table['A']]
+
+# using regular indexing will also work.
+for ix, r in enumerate(table['A']):
+    table['A'][ix] = r * 10
 
 # and it will tell you if you're not allowed:
 try:
     f = lambda x: f"'{x} as text'"
-    table.A = [f(r) for r in table.A]
+    table['A'] = [f(r) for r in table['A']]
     assert False, "The line above must raise a TypeError"
 except TypeError as error:
     print("The error is:", str(error))
 
-# using regular indexing will also work.
-for ix, r in enumerate(table.A):
-    table.A[ix] = r * 10
 
 
 # works with all datatypes:
@@ -556,6 +562,255 @@ table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
                                  'A_2': 'product.sku',
                                  'A_4': 'locations.sender'}
 
+
+class GroupbyFunction(object):
+    def __init__(self, datatype):
+        hasattr(DataTypes, datatype.__name__)
+        self.datatype = datatype
+
+
+class Limit(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.value = None
+        self.f = None
+
+    def update(self, value):
+        if value is None:
+            pass
+        elif self.value is None:
+            self.value = value
+        else:
+            self.value = self.f(value, self.value)
+
+
+class Max(Limit):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.f = max
+
+
+class Min(Limit):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.f = min
+
+
+class Sum(Limit):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.f = sum
+
+
+class First(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.value = None
+
+    def update(self, value):
+        if self.value is None:
+            if value is not None:
+                self.value = value
+
+
+class Last(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.value = None
+
+    def update(self, value):
+        if value is not None:
+            self.value = value
+
+
+class Count(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype=int)  # datatype will be int no matter what type is given.
+        self.value = 0
+
+    def update(self, value):
+        if value is not None:
+            self.value += 1
+
+
+class CountUnique(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype=int)  # datatype will be int no matter what type is given.
+        self.items = set()
+
+    def update(self, value):
+        if value is not None:
+            self.items.add(value)
+            self.value = len(self.items)
+
+
+class Average(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype=float)  # datatype will be float no matter what type is given.
+        self.sum = 0
+        self.count = 0
+        self.value = 0
+
+    def update(self, value):
+        if value is not None:
+            self.sum += value
+            self.count += 1
+            self.value = self.sum / self.count
+
+
+class StandardDeviation(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype=float)  # datatype will be float no matter what type is given.
+        self.count = 0
+        self.mean = 0
+        self.c = 0.0
+
+    def update(self, value):
+        if value is not None:
+            self.count += 1
+            dt = value - self.mean
+            self.mean += dt / self.count
+            self.c += dt * (value - self.mean)
+
+    @property
+    def value(self):
+        if self.count == 0:
+            return 0.0
+        variance = self.c / (self.count - 1)
+        return variance ** (1 / 2)
+
+
+class Histogram(GroupbyFunction):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+        self.hist = defaultdict(int)
+
+    def update(self, value):
+        if value is not None:
+            self.hist[value] += 1
+
+
+class Median(Histogram):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+
+    @property
+    def value(self):
+        midpoint = sum(self.hist.values()) / 2
+        total = 0
+        for k, v in self.hist.items():
+            total += v
+            if total > midpoint:
+                return k
+
+
+class Mode(Histogram):
+    def __init__(self, datatype):
+        super().__init__(datatype)
+
+    @property
+    def value(self):
+        L = [(v, k) for k, v in self.hist.items()]
+        L.sort(reverse=True)
+        frequency, most_frequent = L[0]  # top of the list.
+        return most_frequent
+
+
+class GroupBy(object):
+    functions = [
+        Max, Min, Sum, First, Last,
+        Count, CountUnique,
+        Average, StandardDeviation, Median, Mode
+    ]
+    function_names = {f.__name__: f for f in functions}
+
+    def __init__(self, keys, functions):
+        """
+        :param keys: headers for grouping
+        :param functions: list of headers and functions.
+        :return: None.
+        """
+        assert isinstance(keys, list)
+        assert len(set(keys)) == len(keys), "duplicate key found."
+        self.keys = keys
+
+        assert isinstance(functions, list)
+        assert all(len(i) == 2 for i in functions)
+        assert all(isinstance(a, str) and issubclass(b, GroupbyFunction) for a, b in functions)
+        self.groupby_functions = functions  # list with header name and function name
+
+        self.output = None   # class Table.
+        self.required_headers = None  # headers for reading input.
+        self.data = defaultdict(list)  # key: [list of groupby functions]
+        self.function_classes = []  # initiated functions.
+
+        # for header, function, function_instances in zip(self.groupby_functions, self.function_classes) ....
+
+    def setup(self, table):
+        self.output = Table()
+        self.required_headers = self.keys + [h for h, fn in self.groupby_functions]
+
+        for h in self.keys:
+            col = table[h]
+            self.output.add_column(header=h, datatype=col.datatype, allow_empty=False)  # add column for keys
+
+        self.function_classes = []
+        for h, fn in self.groupby_functions:
+            col = table[h]
+            assert isinstance(col, Column)
+            f_instance = fn(col.datatype)
+            assert isinstance(f_instance, GroupbyFunction)
+            self.function_classes.append(f_instance)
+
+            function_name = f"{fn.__name__}({h})"
+            self.output.add_column(header=function_name, datatype=f_instance.datatype, allow_empty=True)  # add column for fn's.
+
+    def __iadd__(self, other):
+        """
+        To view results use `for row in self.rows`
+        To add more data use self += new data (Table)
+        """
+        assert isinstance(other, Table)
+        if self.output is None:
+            self.setup(other)
+        else:
+            self.output.compare(other)  # this will raise if there are problems
+
+        for row in other.filter(*self.required_headers):
+            d = {h: v for h, v in zip(self.required_headers, row)}
+            key = tuple([d[k] for k in self.keys])
+            functions = self.data.get(key)
+            if not functions:
+                # functions = []
+                # for fn in self.function_classes:
+                #     new_fn = fn.__class__(fn.datatype)
+                #     functions.append(new_fn)
+
+                functions = [fn.__class__(fn.datatype) for fn in self.function_classes]
+                self.data[key] = functions
+
+            for (h, fn), f in zip(self.groupby_functions, functions):
+                f.update(d[h])
+        return self
+
+    @property
+    def rows(self):
+        if self.output is None:
+            return None
+
+        for key, functions in self.data.items():
+            row = key + tuple(fn.value for fn in functions)
+            self.output.add_row(row)
+        self.data.clear()  # hereby we only create the table one.
+
+        for row in self.output.rows:
+            yield row
+
+
+g = GroupBy(keys=['a', 'b'], functions=[('f', Min), ('f', Max), ('g', Median)])
+g += t
+for row in g.rows:
+    print(row)
 
 
 
