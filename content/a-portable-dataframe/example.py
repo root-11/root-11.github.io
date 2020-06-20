@@ -143,6 +143,7 @@ class Column(list):
         super().append(__object)
 
     def replace(self, values):
+        assert isinstance(values, list)
         if len(values) != len(self):
             raise ValueError("input is not of same length as column.")
         _ = [self.type_check(v) for v in values]
@@ -249,6 +250,8 @@ class Table(object):
 
     def __getitem__(self, item):
         """ returns rows as a tuple """
+        if isinstance(item, int):
+            item = slice(item,item+1,1)
         if isinstance(item, slice):
             start = 0 if item.start is None else item.start
             step = 1 if item.step is None else item.step
@@ -327,6 +330,38 @@ class Table(object):
         for ix in range(len(self)):
             item = tuple(c[ix] if ix < len(c) else None for c in self.columns.values())
             yield item
+
+    def index(self, *args):
+        """ Creates index on *args columns as d[(key tuple, ) = {index1, index2, ...} """
+        idx = defaultdict(set)
+        for ix, key in enumerate(self.filter(*args)):
+            idx[key].add(ix)
+        return idx
+
+    def sort(self, *args, **kwargs):
+        """ Perform multi-pass sorting with precedence given order of column names.
+        :param args: Any column header to order the rows by.
+        :param kwargs: 'reverse': boolean.
+        """
+        reverse = True if 'reverse' in kwargs and kwargs['reverse'] == True else False
+        none_substitute = float('-inf')
+
+        rank = {i: tuple() for i in range(len(self))}
+        for key in args:
+            ranking = [(v, ix) if v is not None else (none_substitute, ix) for ix, v in enumerate(self.columns[key])]
+            for r, (v, ix) in enumerate(ranking):
+                rank[ix] += (r,)  # rank is appended to the tuple
+
+        new_order = [(r, i) for i, r in rank.items()]  # tuples are listed and sort...
+        new_order.sort(reverse=reverse)
+        sorted_index = [i for r, i in new_order]  # new index is extracted.
+
+        rank.clear()  # free memory.
+        new_order.clear()
+
+        for col_name, col in self.columns.items():
+            assert isinstance(col, Column)
+            col.replace(values=[col[ix] for ix in sorted_index])
 
     def filter(self, *headers):
         """ returns values in same order as headers. """
@@ -533,7 +568,6 @@ except TypeError as error:
     print("The error is:", str(error))
 
 
-
 # works with all datatypes:
 now = datetime.now()
 
@@ -561,6 +595,130 @@ assert table4 == table5
 table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
                                  'A_2': 'product.sku',
                                  'A_4': 'locations.sender'}
+
+# doing lookups is supported by indexing:
+table6 = Table()
+table6.add_column('A', str, data=['Alice', 'Bob', 'Bob', 'Ben', 'Charlie', 'Ben', 'Albert'])
+table6.add_column('B', str, data=['Alison', 'Marley', 'Dylan', 'Affleck', 'Hepburn', 'Barnes', 'Einstein'])
+index = table6.index('A')
+assert index[('Bob', )] == {1,2}
+
+# a couple of examples with SQL join:
+left = Table()
+left.add_column('number', int, allow_empty=True, data=[1, 2, 3, 4, None])
+left.add_column('colour', str, data=['black', 'blue', 'white', 'white', 'blue'])
+
+right = Table()
+right.add_column('letter', str, allow_empty=True, data=['a', 'b,', 'c', 'd', None])
+right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'])
+
+# left join
+# SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
+# left_join = left_table.left_join(right_table, keys=['colour'], columns=['number', 'letter'])
+
+left_join = Table()
+left_join.add_column('number', int, allow_empty=True)
+left_join.add_column('letter', str, allow_empty=True)
+
+keys = ['colour']
+
+left_ixs = range(len(left))
+right_idx = right.index(*keys)
+
+# key_filter = [1 if h in keys else 0 for h in left.columns]
+
+for left_ix in left_ixs:
+    # key = tuple(v for v,f in zip(left[left_ix], key_filter) if f)
+    key = tuple(left[h][left_ix] for h in keys)
+    right_ixs = right_idx.get(key, (None,))
+    for right_ix in right_ixs:
+        for col_name, column in left_join.columns.items():
+            if col_name in left:
+                column.append(left[col_name][left_ix])
+            elif col_name in right:
+                if right_ix is not None:
+                    column.append(right[col_name][right_ix])
+                else:
+                    column.append(None)
+            else: raise Exception('bad logic')
+
+# inner join
+# SELECT number, letter FROM left JOIN right ON left.colour == right.colour
+# inner_join = left_table.inner_join_with(right_table, keys=['colour'],  columns=['number','letter'])
+
+inner_join = Table()
+inner_join.add_column('number', int, allow_empty=True)
+inner_join.add_column('letter', str, allow_empty=True)
+
+keys = ['colour']
+
+key_union = set(left.filter(*keys)).intersection(set(right.filter(*keys)))
+assert key_union == {('white',), ('blue',)}
+
+left_ixs = left.index(*keys)
+right_ixs = right.index(*keys)
+
+for key in key_union:
+    for left_ix in left_ixs.get(key, set()):
+        for right_ix in right_ixs.get(key, set()):
+            for col_name, column in inner_join.columns.items():
+                if col_name in left:
+                    column.append(left[col_name][left_ix])
+                elif col_name in right:
+                    column.append(right[col_name][right_ix])
+                else: raise Exception("bad logic.")
+
+# outer join
+# SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
+# outer_join = left_table.outer_join(right_table, keys=['colour'], columns=['number','letter'])
+
+outer_join = Table()
+outer_join.add_column('number', int, allow_empty=True)
+outer_join.add_column('letter', str, allow_empty=True)
+
+keys = ['colour']
+
+# assert key_union == {'blue', 'white'}
+
+left_ixs = range(len(left))
+right_idx = right.index(*keys)
+right_keyset = set(right_ixs)
+
+# left_filter = [1 if h in keys else 0 for h in left.columns]
+# right_filter = [1 if h in keys else 0 for h in right.columns]
+
+for left_ix in left_ixs:
+    # key = tuple(v for v, f in zip(left[left_ix], left_filter) if f)
+    key = tuple(left[h][left_ix] for h in keys)
+    right_ixs = right_idx.get(key, (None,))
+    right_keyset.discard(key)
+    for right_ix in right_ixs:
+        for col_name, column in outer_join.columns.items():
+            if col_name in left:
+                column.append(left[col_name][left_ix])
+            elif col_name in right:
+                if right_ix is not None:
+                    column.append(right[col_name][right_ix])
+                else:
+                    column.append(None)
+            else: raise Exception('bad logic')
+
+for right_key in right_keyset:
+    for right_ix in right_idx[right_key]:
+        for col_name, column in outer_join.columns.items():
+            if col_name in left:
+                column.append(None)
+            elif col_name in right:
+                column.append(right[col_name][right_ix])
+            else: raise Exception('bad logic')
+
+# Sortation
+
+table7 = Table()
+table7.add_column('A', int, data=[1, None, 2, 2, 2, 2, 2, 3, -1], allow_empty=True)
+table7.add_column('B', int, data=[10, 111, 5, 4, 3, 4, 2, 1, 88])
+table7.add_column('C', int, data=[30, 131, 3, 4, 3, 4, 2, 5, 55])
+table7.sort('B', 'A', 'C')
 
 
 class GroupbyFunction(object):
@@ -781,11 +939,6 @@ class GroupBy(object):
             key = tuple([d[k] for k in self.keys])
             functions = self.data.get(key)
             if not functions:
-                # functions = []
-                # for fn in self.function_classes:
-                #     new_fn = fn.__class__(fn.datatype)
-                #     functions.append(new_fn)
-
                 functions = [fn.__class__(fn.datatype) for fn in self.function_classes]
                 self.data[key] = functions
 
@@ -809,8 +962,20 @@ class GroupBy(object):
 
 g = GroupBy(keys=['a', 'b'], functions=[('f', Min), ('f', Max), ('g', Median)])
 g += t
+
+g_out = [
+    (0, 0, 1, 1, 0),
+    (1, 1, 4, 4, 1),
+    (2, 2, 7, 7, 8),
+    (3, 3, 10, 10, 27),
+    (4, 4, 13, 13, 64)
+]
+
 for row in g.rows:
-    print(row)
+    g_out.remove(row)
+assert not g_out  # g_out is empty.
+
+
 
 
 
