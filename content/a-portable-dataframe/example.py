@@ -1,18 +1,3 @@
-# After having spent a bit of time on protobuf, I've found it to be -
-# apologies Googlers - an over engineered format in excess of my needs.
-
-# So what exactly do i need?
-#
-# A table that can:
-# - store data on a columnar basis.
-# - each column has header, datatype, allows empty fields
-# - I can access the columns in the table as a namedtuple.
-# - add/remove rows.
-# - add/remove columns.
-# - is readable
-# - compresses / reads from compressed format in a single function.
-# - allows fast index access to elements in each column
-
 import zlib
 import json
 from itertools import count
@@ -554,7 +539,6 @@ class Table(object):
         right_keyset = set(right_idx)
 
         for left_ix in left_ixs:
-            # key = tuple(v for v, f in zip(left[left_ix], left_filter) if f)
             key = tuple(left[h][left_ix] for h in keys)
             right_ixs = right_idx.get(key, (None,))
             right_keyset.discard(key)
@@ -985,6 +969,7 @@ class GroupBy(object):
         self.data = defaultdict(list)  # key: [list of groupby functions]
         self.function_classes = []  # initiated functions.
 
+        # Order is preserved so that this is doable:
         # for header, function, function_instances in zip(self.groupby_functions, self.function_classes) ....
 
     def setup(self, table):
