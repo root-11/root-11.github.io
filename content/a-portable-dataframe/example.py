@@ -348,9 +348,11 @@ class Table(object):
 
         rank = {i: tuple() for i in range(len(self))}
         for key in args:
-            ranking = [(v, ix) if v is not None else (none_substitute, ix) for ix, v in enumerate(self.columns[key])]
-            for r, (v, ix) in enumerate(ranking):
-                rank[ix] += (r,)  # rank is appended to the tuple
+            unique_values = {v: 0 for v in self.columns[key] if v is not None}
+            for r, v in enumerate(sorted(unique_values, reverse=reverse)):
+                unique_values[v] = r
+            for ix, v in enumerate(self.columns[key]):
+                rank[ix] += (unique_values.get(v, none_substitute), )
 
         new_order = [(r, i) for i, r in rank.items()]  # tuples are listed and sort...
         new_order.sort(reverse=reverse)
@@ -771,7 +773,23 @@ table7 = Table()
 table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
 table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
 table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
-table7.sort('B', 'A', 'C')
+table7.sort('B', 'C', 'A')
+
+table7_sorted = [
+    (4, 1, 0),
+    (8, 1, 0),
+    (3, 1, 1),
+    (6, 1, 1),
+    (1, 10, 0),
+    (5, 10, 0),
+    (9, 10, 0),
+    (7, 10, 1),
+    (None, 100, 1)
+]
+
+for row in table7.rows:
+    table7_sorted.remove(row)
+assert not table7_sorted, "table7_sorted should be empty by now."
 
 
 class GroupbyFunction(object):
