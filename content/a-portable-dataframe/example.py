@@ -142,7 +142,7 @@ class Column(list):
         self.type_check(__object)
         super().append(__object)
 
-    def replace(self, values):
+    def replace(self, values) -> None:
         assert isinstance(values, list)
         if len(values) != len(self):
             raise ValueError("input is not of same length as column.")
@@ -215,13 +215,13 @@ class Table(object):
 
     @classmethod
     def from_json(cls, json_):
-        df = Table()
+        t = Table()
         for c in json.loads(json_):
             col = Column.from_json(c)
-            col.header = df.check_for_duplicate_header(col.header)
-            df.columns[col.header] = col
-            df.__setattr__(col.header, col)
-        return df
+            col.header = t.check_for_duplicate_header(col.header)
+            t.columns[col.header] = col
+            t.__setattr__(col.header, col)
+        return t
 
     def check_for_duplicate_header(self, header):
         assert isinstance(header, str)
@@ -234,8 +234,7 @@ class Table(object):
     def add_column(self, header, datatype, allow_empty=False, data=None):
         assert isinstance(header, str)
         header = self.check_for_duplicate_header(header)
-        c = Column(header, datatype, allow_empty, data=data)
-        self.columns[header] = c
+        self.columns[header] = Column(header, datatype, allow_empty, data=data)
 
     def add_row(self, values):
         if not isinstance(values, tuple):
@@ -307,7 +306,7 @@ class Table(object):
                     raise ValueError(f"Column {name}.allow_empty is different")
 
     def __iadd__(self, other):
-        """ allows Table_1 += Table_2 """
+        """ enables Table_1 += Table_2 """
         self.compare(other)
         for h, col in self.columns.items():
             c2 = other.columns[h]
@@ -315,18 +314,21 @@ class Table(object):
         return self
 
     def __add__(self, other):
-        """ allows Table_3 = Table_1 + Table_2 """
+        """ enables Table_3 = Table_1 + Table_2 """
         self.compare(other)
-
-        t_out = self.copy()
-
-        for h, col in t_out.columns.items():
+        cp = self.copy()
+        for h, col in cp.columns.items():
             c2 = other.columns[h]
             col.extend(c2[:])
-        return t_out
+        return cp
 
     @property
     def rows(self):
+        """ enables iteration
+
+        for row in table.rows:
+            print(row)
+        """
         for ix in range(len(self)):
             item = tuple(c[ix] if ix < len(c) else None for c in self.columns.values())
             yield item
@@ -343,7 +345,7 @@ class Table(object):
         :param args: Any column header to order the rows by.
         :param kwargs: 'reverse': boolean.
         """
-        reverse = True if 'reverse' in kwargs and kwargs['reverse'] == True else False
+        reverse = True if 'reverse' in kwargs and kwargs['reverse'] is True else False
         none_substitute = float('-inf')
 
         rank = {i: tuple() for i in range(len(self))}
@@ -366,7 +368,15 @@ class Table(object):
             col.replace(values=[col[ix] for ix in sorted_index])
 
     def filter(self, *headers):
-        """ returns values in same order as headers. """
+        """ enables iteration on a limited number of headers:
+
+        >>> table.columns
+        'a','b','c','d','e'
+
+        for row in table.filter('b', 'a', 'a', 'c'):
+            b,a,a,c = row ...
+
+        returns values in same order as headers. """
         L = [self.columns[h] for h in headers]
         for ix in range(len(self)):
             item = tuple(c[ix] if ix < len(c) else None for c in L)
@@ -380,7 +390,7 @@ class Table(object):
         if not isinstance(kwargs, dict):
             raise TypeError("did you remember to add the ** in front of your dict?")
         if not all(k in self.columns for k in kwargs):
-            raise ValueError(f"Unkonwn column(s): {[k for k in kwargs if k not in self.columns]}")
+            raise ValueError(f"Unknown column(s): {[k for k in kwargs if k not in self.columns]}")
 
         ixs = None
         for k, v in kwargs.items():
