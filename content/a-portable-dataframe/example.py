@@ -340,24 +340,27 @@ class Table(object):
             idx[key].add(ix)
         return idx
 
-    def sort(self, *args, **kwargs):
+    def sort(self, **kwargs):
         """ Perform multi-pass sorting with precedence given order of column names.
-        :param args: Any column header to order the rows by.
-        :param kwargs: 'reverse': boolean.
+        :param kwargs: keys: columns, values: 'reverse' as boolean.
         """
-        reverse = True if 'reverse' in kwargs and kwargs['reverse'] is True else False
+        for k, v in kwargs.items():
+            if k not in self.columns:
+                raise ValueError(f"no column {k}")
+            if not isinstance(v, bool):
+                raise ValueError(f"{k} was mapped to {v} - a non-boolean")
         none_substitute = float('-inf')
 
         rank = {i: tuple() for i in range(len(self))}
-        for key in args:
+        for key in kwargs:
             unique_values = {v: 0 for v in self.columns[key] if v is not None}
-            for r, v in enumerate(sorted(unique_values, reverse=reverse)):
+            for r, v in enumerate(sorted(unique_values, reverse=kwargs[key])):
                 unique_values[v] = r
             for ix, v in enumerate(self.columns[key]):
                 rank[ix] += (unique_values.get(v, none_substitute), )
 
         new_order = [(r, i) for i, r in rank.items()]  # tuples are listed and sort...
-        new_order.sort(reverse=reverse)
+        new_order.sort()
         sorted_index = [i for r, i in new_order]  # new index is extracted.
 
         rank.clear()  # free memory.
@@ -783,7 +786,7 @@ table7 = Table()
 table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
 table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
 table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
-table7.sort('B', 'C', 'A')
+table7.sort(**{'B': False, 'C': False, 'A': False})
 
 table7_sorted = [
     (4, 1, 0),
