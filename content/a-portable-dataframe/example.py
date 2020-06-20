@@ -671,11 +671,10 @@ t.add_column(header='f', datatype=int, allow_empty=False)
 t.add_column(header='g', datatype=int, allow_empty=True)
 
 # we can now use the filter, to iterate over the table:
-
 for row in t.filter('a', 'b', 'c', 'd'):
     a, b, c, d = row
 
-    # and add the values to the two new columns
+    # ... and add the values to the two new columns
     t['f'].append(f1(a, b, c))
     t['g'].append(f2(b, c, d))
 
