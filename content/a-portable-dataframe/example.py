@@ -792,7 +792,7 @@ class Limit(GroupbyFunction):
         elif self.value is None:
             self.value = value
         else:
-            self.value = self.f(value, self.value)
+            self.value = self.f((value, self.value))
 
 
 class Max(Limit):
@@ -1022,18 +1022,20 @@ g = GroupBy(keys=['a', 'b'], functions=[('f', Max),
                                         ('f', CountUnique),
                                         ('f', Average),
                                         ('f', StandardDeviation),
+                                        ('a', StandardDeviation),
                                         ('f', Median),
                                         ('f', Mode),
                                         ('g', Median)])
-g += t
+t2 = t + t
+assert len(t2) == 2 * len(t)
 
-g_out = [
-    (0, 0, 1, 1, 1, 1, 1, 1, 1, 1.0, 0.0, 1, 1, 0),
-    (1, 1, 4, 4, 4, 4, 4, 1, 1, 4.0, 0.0, 4, 4, 1),
-    (2, 2, 7, 7, 7, 7, 7, 1, 1, 7.0, 0.0, 7, 7, 8),
-    (3, 3, 10, 10, 10, 10, 10, 1, 1, 10.0, 0.0, 10, 10, 27),
-    (4, 4, 13, 13, 13, 13, 13, 1, 1, 13.0, 0.0, 13, 13, 64)
-]
+g += t2
+
+g_out = [(0, 0, 1, 1, 2, 1, 1, 2, 1, 1.0, 0.0, 0.0, 1, 1, 0),
+         (1, 1, 4, 4, 8, 4, 4, 2, 1, 4.0, 0.0, 0.0, 4, 4, 1),
+         (2, 2, 7, 7, 14, 7, 7, 2, 1, 7.0, 0.0, 0.0, 7, 7, 8),
+         (3, 3, 10, 10, 20, 10, 10, 2, 1, 10.0, 0.0, 0.0, 10, 10, 27),
+         (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)]
 
 for row in g.rows:
     g_out.remove(row)
