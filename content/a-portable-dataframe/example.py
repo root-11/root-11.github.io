@@ -281,7 +281,7 @@ class Table(object):
             raise KeyError(f"key not found")
 
     def __setattr__(self, name, value):
-        if hasattr(self, name):
+        if isinstance(name, str) and hasattr(self, name):
             if name in self.columns and isinstance(value, list):
                 col = self.columns[name]
                 col.replace(value)
@@ -429,6 +429,142 @@ class Table(object):
         for col in self.columns.values():
             t.add_column(col.header, col.datatype, col.allow_empty, data=[col[ix] for ix in ixs])
         return t
+
+    def left_join(self, other, keys, columns):
+        """
+        :param other: self, other = (left, right)
+        :param keys: list of keys for the join
+        :param columns: list of columns to retain
+        :return: new table
+
+        Example:
+        SQL:   SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
+        Table: left_join = left_table.left_join(right_table, keys=['colour'], columns=['number', 'letter'])
+        """
+        assert isinstance(other, Table)
+        assert isinstance(keys, list)
+        assert all(k in self.columns and k in other.columns for k in keys)
+
+        left_join = Table()
+        for col_name in columns:
+            if col_name in self.columns:
+                col = self.columns[col_name]
+            elif col_name in other.columns:
+                col = other.columns[col_name]
+            else:
+                raise ValueError(f"column name '{col_name}' not in any table.")
+            left_join.add_column(col_name, col.datatype, allow_empty=True)
+
+        left_ixs = range(len(left))
+        right_idx = right.index(*keys)
+
+        for left_ix in left_ixs:
+            key = tuple(left[h][left_ix] for h in keys)
+            right_ixs = right_idx.get(key, (None,))
+            for right_ix in right_ixs:
+                for col_name, column in left_join.columns.items():
+                    if col_name in left:
+                        column.append(left[col_name][left_ix])
+                    elif col_name in right:
+                        if right_ix is not None:
+                            column.append(right[col_name][right_ix])
+                        else:
+                            column.append(None)
+                    else:
+                        raise Exception('bad logic')
+        return left_join
+
+    def inner_join(self, other, keys, columns):
+        """
+        :param other: table
+        :param keys: list of keys
+        :param columns: list of columns to retain
+        :return: new Table
+
+        Example:
+        SQL:   SELECT number, letter FROM left INNER JOIN right ON left.colour == right.colour
+        Table: inner_join = left_table.inner_join_with(right_table, keys=['colour'],  columns=['number','letter'])
+        """
+        inner_join = Table()
+        for col_name in columns:
+            if col_name in self.columns:
+                col = self.columns[col_name]
+            elif col_name in other.columns:
+                col = other.columns[col_name]
+            else:
+                raise ValueError(f"column name '{col_name}' not in any table.")
+            inner_join.add_column(col_name, col.datatype, allow_empty=True)
+
+        key_union = set(left.filter(*keys)).intersection(set(right.filter(*keys)))
+        assert key_union == {('white',), ('blue',)}
+
+        left_ixs = left.index(*keys)
+        right_ixs = right.index(*keys)
+
+        for key in key_union:
+            for left_ix in left_ixs.get(key, set()):
+                for right_ix in right_ixs.get(key, set()):
+                    for col_name, column in inner_join.columns.items():
+                        if col_name in left:
+                            column.append(left[col_name][left_ix])
+                        elif col_name in right:
+                            column.append(right[col_name][right_ix])
+                        else:
+                            raise Exception("bad logic.")
+        return inner_join
+
+    def outer_join(self, other, keys, columns):
+        """
+        :param other: table
+        :param keys: list of keys
+        :param columns: list of columns to retain
+        :return: new Table
+
+        Example:
+        SQL:   SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
+        Table: outer_join = left_table.outer_join(right_table, keys=['colour'], columns=['number','letter'])
+        """
+        outer_join = Table()
+        for col_name in columns:
+            if col_name in self.columns:
+                col = self.columns[col_name]
+            elif col_name in other.columns:
+                col = other.columns[col_name]
+            else:
+                raise ValueError(f"column name '{col_name}' not in any table.")
+            outer_join.add_column(col_name, col.datatype, allow_empty=True)
+
+        left_ixs = range(len(left))
+        right_idx = right.index(*keys)
+        right_keyset = set(right_idx)
+
+        for left_ix in left_ixs:
+            # key = tuple(v for v, f in zip(left[left_ix], left_filter) if f)
+            key = tuple(left[h][left_ix] for h in keys)
+            right_ixs = right_idx.get(key, (None,))
+            right_keyset.discard(key)
+            for right_ix in right_ixs:
+                for col_name, column in outer_join.columns.items():
+                    if col_name in left:
+                        column.append(left[col_name][left_ix])
+                    elif col_name in right:
+                        if right_ix is not None:
+                            column.append(right[col_name][right_ix])
+                        else:
+                            column.append(None)
+                    else:
+                        raise Exception('bad logic')
+
+        for right_key in right_keyset:
+            for right_ix in right_idx[right_key]:
+                for col_name, column in outer_join.columns.items():
+                    if col_name in left:
+                        column.append(None)
+                    elif col_name in right:
+                        column.append(right[col_name][right_ix])
+                    else:
+                        raise Exception('bad logic')
+        return outer_join
 
 
 # creating a table incrementally is straight forward:
@@ -600,8 +736,13 @@ table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
 table6 = Table()
 table6.add_column('A', str, data=['Alice', 'Bob', 'Bob', 'Ben', 'Charlie', 'Ben', 'Albert'])
 table6.add_column('B', str, data=['Alison', 'Marley', 'Dylan', 'Affleck', 'Hepburn', 'Barnes', 'Einstein'])
-index = table6.index('A')
-assert index[('Bob', )] == {1,2}
+
+index = table6.index('A')  # single key.
+assert index[('Bob',)] == {1, 2}
+
+index2 = table6.index('A', 'B')  # multiple keys.
+assert index2[('Bob', 'Dylan')] == {2}
+
 
 # a couple of examples with SQL join:
 left = Table()
@@ -614,110 +755,22 @@ right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'
 
 # left join
 # SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
-# left_join = left_table.left_join(right_table, keys=['colour'], columns=['number', 'letter'])
-
-left_join = Table()
-left_join.add_column('number', int, allow_empty=True)
-left_join.add_column('letter', str, allow_empty=True)
-
-keys = ['colour']
-
-left_ixs = range(len(left))
-right_idx = right.index(*keys)
-
-# key_filter = [1 if h in keys else 0 for h in left.columns]
-
-for left_ix in left_ixs:
-    # key = tuple(v for v,f in zip(left[left_ix], key_filter) if f)
-    key = tuple(left[h][left_ix] for h in keys)
-    right_ixs = right_idx.get(key, (None,))
-    for right_ix in right_ixs:
-        for col_name, column in left_join.columns.items():
-            if col_name in left:
-                column.append(left[col_name][left_ix])
-            elif col_name in right:
-                if right_ix is not None:
-                    column.append(right[col_name][right_ix])
-                else:
-                    column.append(None)
-            else: raise Exception('bad logic')
+left_join = left.left_join(right, keys=['colour'], columns=['number', 'letter'])
 
 # inner join
 # SELECT number, letter FROM left JOIN right ON left.colour == right.colour
-# inner_join = left_table.inner_join_with(right_table, keys=['colour'],  columns=['number','letter'])
-
-inner_join = Table()
-inner_join.add_column('number', int, allow_empty=True)
-inner_join.add_column('letter', str, allow_empty=True)
-
-keys = ['colour']
-
-key_union = set(left.filter(*keys)).intersection(set(right.filter(*keys)))
-assert key_union == {('white',), ('blue',)}
-
-left_ixs = left.index(*keys)
-right_ixs = right.index(*keys)
-
-for key in key_union:
-    for left_ix in left_ixs.get(key, set()):
-        for right_ix in right_ixs.get(key, set()):
-            for col_name, column in inner_join.columns.items():
-                if col_name in left:
-                    column.append(left[col_name][left_ix])
-                elif col_name in right:
-                    column.append(right[col_name][right_ix])
-                else: raise Exception("bad logic.")
+inner_join = left.inner_join(right, keys=['colour'],  columns=['number','letter'])
 
 # outer join
 # SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
-# outer_join = left_table.outer_join(right_table, keys=['colour'], columns=['number','letter'])
+outer_join = left.outer_join(right, keys=['colour'], columns=['number','letter'])
 
-outer_join = Table()
-outer_join.add_column('number', int, allow_empty=True)
-outer_join.add_column('letter', str, allow_empty=True)
-
-keys = ['colour']
-
-# assert key_union == {'blue', 'white'}
-
-left_ixs = range(len(left))
-right_idx = right.index(*keys)
-right_keyset = set(right_ixs)
-
-# left_filter = [1 if h in keys else 0 for h in left.columns]
-# right_filter = [1 if h in keys else 0 for h in right.columns]
-
-for left_ix in left_ixs:
-    # key = tuple(v for v, f in zip(left[left_ix], left_filter) if f)
-    key = tuple(left[h][left_ix] for h in keys)
-    right_ixs = right_idx.get(key, (None,))
-    right_keyset.discard(key)
-    for right_ix in right_ixs:
-        for col_name, column in outer_join.columns.items():
-            if col_name in left:
-                column.append(left[col_name][left_ix])
-            elif col_name in right:
-                if right_ix is not None:
-                    column.append(right[col_name][right_ix])
-                else:
-                    column.append(None)
-            else: raise Exception('bad logic')
-
-for right_key in right_keyset:
-    for right_ix in right_idx[right_key]:
-        for col_name, column in outer_join.columns.items():
-            if col_name in left:
-                column.append(None)
-            elif col_name in right:
-                column.append(right[col_name][right_ix])
-            else: raise Exception('bad logic')
 
 # Sortation
-
 table7 = Table()
-table7.add_column('A', int, data=[1, None, 2, 2, 2, 2, 2, 3, -1], allow_empty=True)
-table7.add_column('B', int, data=[10, 111, 5, 4, 3, 4, 2, 1, 88])
-table7.add_column('C', int, data=[30, 131, 3, 4, 3, 4, 2, 5, 55])
+table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
+table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
+table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
 table7.sort('B', 'A', 'C')
 
 
@@ -832,7 +885,7 @@ class StandardDeviation(GroupbyFunction):
 
     @property
     def value(self):
-        if self.count == 0:
+        if self.count <= 1:
             return 0.0
         variance = self.c / (self.count - 1)
         return variance ** (1 / 2)
@@ -960,15 +1013,26 @@ class GroupBy(object):
             yield row
 
 
-g = GroupBy(keys=['a', 'b'], functions=[('f', Min), ('f', Max), ('g', Median)])
+g = GroupBy(keys=['a', 'b'], functions=[('f', Max),
+                                        ('f', Min),
+                                        ('f', Sum),
+                                        ('f', First),
+                                        ('f', Last),
+                                        ('f', Count),
+                                        ('f', CountUnique),
+                                        ('f', Average),
+                                        ('f', StandardDeviation),
+                                        ('f', Median),
+                                        ('f', Mode),
+                                        ('g', Median)])
 g += t
 
 g_out = [
-    (0, 0, 1, 1, 0),
-    (1, 1, 4, 4, 1),
-    (2, 2, 7, 7, 8),
-    (3, 3, 10, 10, 27),
-    (4, 4, 13, 13, 64)
+    (0, 0, 1, 1, 1, 1, 1, 1, 1, 1.0, 0.0, 1, 1, 0),
+    (1, 1, 4, 4, 4, 4, 4, 1, 1, 4.0, 0.0, 4, 4, 1),
+    (2, 2, 7, 7, 7, 7, 7, 1, 1, 7.0, 0.0, 7, 7, 8),
+    (3, 3, 10, 10, 10, 10, 10, 1, 1, 10.0, 0.0, 10, 10, 27),
+    (4, 4, 13, 13, 13, 13, 13, 1, 1, 13.0, 0.0, 13, 13, 64)
 ]
 
 for row in g.rows:
