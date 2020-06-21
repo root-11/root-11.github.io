@@ -93,6 +93,12 @@ class Column(list):
             all(a == b for a, b in zip(self, other))
         ])
 
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return f"Column({self.header},{self.datatype},{self.allow_empty}) # ({len(self)} rows)"
+
     def __copy__(self):
         return self.copy()
 
@@ -184,13 +190,54 @@ class Table(object):
         t.metadata = self.metadata.copy()
         return t
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
+
     def __str__(self):
         variation = ""
         lengths = {k: len(v) for k, v in self.columns.items()}
-        if set(lengths.values()) != 1:
+        if len(set(lengths.values())) != 1:
             longest_col = max(lengths.values())
             variation = f"(except {', '.join([f'{k}({v})' for k,v in lengths.items() if v < longest_col])})"
-        return f"<{self.__class__.__name__}> {len(self.columns)} columns x {len(self)} rows {variation}"
+        return f"{self.__class__.__name__}() # {len(self.columns)} columns x {len(self)} rows {variation}"
+
+    def show(self, *items):
+        """ shows the table.
+        param: items: column names, slice.
+        :returns None. Output is printed to stdout.
+        """
+        if any(not isinstance(i, (str, slice)) for i in items):
+            raise SyntaxError(f"unexpected input: {[not isinstance(i, (str, slice)) for i in items]}")
+
+        slices = [i for i in items if isinstance(i, slice)]
+        if len(slices) > 2: raise SyntaxError("1 > slices")
+        if not slices:
+            slc = slice(0, None, None)
+        else:
+            slc = slices[0]
+        assert isinstance(slc, slice)
+
+        headers = [i for i in items if isinstance(i, str)]
+        if any(h not in self.columns for h in headers):
+            raise ValueError(f"column not found: {[h for h in headers if h not in self.columns]}")
+        if not headers:
+            headers = list(self.columns)
+
+        # starting to produce output
+        c_lens = {}
+        for h in headers:
+            col = self.columns[h]
+            assert isinstance(col, Column)
+            c_lens[h] = max([len(col.header), len(str(col.datatype.__name__)), len(str(False))] + [len(str(v)) for v in col[slc]])
+
+        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+")
+        print("|", "|".join([h.center(c_lens[h], " ") for h in headers]), "|")
+        print("|", "|".join([self.columns[h].datatype.__name__.center(c_lens[h], " ") for h in headers]), "|")
+        print("|", "|".join([str(self.columns[h].allow_empty).center(c_lens[h], " ") for h in headers]), "|")
+        print("+", "+".join(["-" * c_lens[h] for h in headers]), "+")
+        for row in self.filter(*tuple(headers) + (slc, )):
+            print("|", "|".join([str(v).rjust(c_lens[h]) for v, h in zip(row, headers)]), "|")
+        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+")
 
     def copy(self):
         return self.__copy__()
@@ -355,7 +402,7 @@ class Table(object):
             assert isinstance(col, Column)
             col.replace(values=[col[ix] for ix in sorted_index])
 
-    def filter(self, *headers):
+    def filter(self, *items):
         """ enables iteration on a limited number of headers:
 
         >>> table.columns
@@ -365,8 +412,27 @@ class Table(object):
             b,a,a,c = row ...
 
         returns values in same order as headers. """
+        if any(not isinstance(i, (str, slice)) for i in items):
+            raise SyntaxError(f"unexpected input: {[not isinstance(i, (str, slice)) for i in items]}")
+
+        slices = [i for i in items if isinstance(i, slice)]
+        if len(slices) > 2: raise SyntaxError("1 > slices")
+        if not slices:
+            slc = slice(0,None,None)
+        else:
+            slc = slices[0]
+        assert isinstance(slc, slice)
+
+        start = 0 if slc.start is None else slc.start
+        step = 1 if slc.step is None else slc.step
+        stop = len(self) if slc.stop is None else slc.stop
+
+        headers = [i for i in items if isinstance(i, str)]
+        if any(h not in self.columns for h in headers): 
+            raise ValueError(f"column not found: {[h for h in headers if h not in self.columns]}") 
+        
         L = [self.columns[h] for h in headers]
-        for ix in range(len(self)):
+        for ix in range(start, stop, step):
             item = tuple(c[ix] if ix < len(c) else None for c in L)
             yield item
 
@@ -635,16 +701,17 @@ filter_2 = lambda x: x > 3
 
 after = table2.all(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] == [(44, 'Hallo')]
+assert list(after.rows) == [(44, 'Hallo')]
 
 # as is filtering or for ANY that match:
 after = table2.any(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+assert list(after.rows) == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
 
 # Imagine a table with columns a,b,c,d,e (all integers) like this:
 t = Table()
-_ = [t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)]) for c in 'abcde']
+for c in 'abcde':
+    t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)])
 
 # we want to add two new columns using the functions:
 def f1(a,b,c): return a+b+c+1
@@ -663,7 +730,7 @@ for row in t.filter('a', 'b', 'c', 'd'):
     t['g'].append(f2(b, c, d))
 
 assert len(t) == 5
-assert len(t.columns) == len('abcdefg')
+assert list(t.columns) == list('abcdefg')
 
 # slicing is easy:
 table_chunk = table2[2:4]
@@ -680,10 +747,10 @@ assert set(table2.columns) == {'A', 'B'}
 # adding a computed column is easy:
 table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
 
-# iterating over the rows is easy:
-print(table)
-for row in table.rows:
-    print(row)
+# part of or the whole table is easy:
+table.show()
+
+table.show('A', slice(0, 1))
 
 # updating a column with a function is easy:
 f = lambda x: x * 10
@@ -771,7 +838,7 @@ table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
 table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
 table7.sort(**{'B': False, 'C': False, 'A': False})
 
-table7_sorted = [
+assert list(table7.rows) == [
     (4, 1, 0),
     (8, 1, 0),
     (3, 1, 1),
@@ -783,9 +850,7 @@ table7_sorted = [
     (None, 100, 1)
 ]
 
-for row in table7.rows:
-    table7_sorted.remove(row)
-assert not table7_sorted, "table7_sorted should be empty by now."
+assert list(table7.filter('A', 'B', slice(4, 8))) == [(1, 10), (5, 10), (9, 10), (7, 10)]
 
 
 class GroupbyFunction(object):
@@ -1047,17 +1112,13 @@ assert len(t2) == 2 * len(t)
 
 g += t2
 
-g_out = [
+assert list(g.rows) == [
     (0, 0, 1, 1, 2, 1, 1, 2, 1, 1.0, 0.0, 0.0, 1, 1, 0),
     (1, 1, 4, 4, 8, 4, 4, 2, 1, 4.0, 0.0, 0.0, 4, 4, 1),
     (2, 2, 7, 7, 14, 7, 7, 2, 1, 7.0, 0.0, 0.0, 7, 7, 8),
     (3, 3, 10, 10, 20, 10, 10, 2, 1, 10.0, 0.0, 0.0, 10, 10, 27),
     (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
 ]
-
-for row in g.rows:
-    g_out.remove(row)
-assert not g_out  # g_out is empty.
 
 
 
