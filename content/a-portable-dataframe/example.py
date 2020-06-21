@@ -817,7 +817,7 @@ left.add_column('number', int, allow_empty=True, data=[1, 2, 3, 4, None])
 left.add_column('colour', str, data=['black', 'blue', 'white', 'white', 'blue'])
 
 right = Table()
-right.add_column('letter', str, allow_empty=True, data=['a', 'b,', 'c', 'd', None])
+right.add_column('letter', str, allow_empty=True, data=['a', 'b', 'c', 'd', None])
 right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'])
 
 # left join
