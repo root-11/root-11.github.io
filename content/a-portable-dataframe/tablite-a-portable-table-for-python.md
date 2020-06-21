@@ -1,21 +1,28 @@
 We're all tired of reinventing the wheel when we need to process a bit of data.
 
 - Pandas has a huge memory overhead.
-- Numpy just doesn't seem pythonic anymore.
-- Arrows isn't ready
-- SQLite is great but just too slow.
+- Numpy has become a language of it's own. It just doesn't seem pythonic anymore.
+- Arrows isn't ready.
+- SQLite is great but just too slow, particularly on disk.
+- Protobuffer is just overkill for storing data when I still need to implement all the analytics after that.
 
 So what do we do? We write a custom built class for the problem at hand and
 discover that we've just spent 3 hours doing something that should have taken
 20 minutes.
 
-### Enter tablite
+### Now more! ...Enter: [tablite](https://pypi.org/tablite)
 A python library for tables that does everything you need.
 
 - it handles all datatypes: str,float,bool,int,date,datetime,time.
-- you can select columns as `table['A']` and you can select rows as `table['A'][4:8]`
-- you can dump to json as `table.to_json()` and you can load it with `Table.from_json(json_str)`
-- it does type checking when you append and replace data, and allows you to update with `table['A'][2] = new value`
+- you can select: 
+  - all rows in a column as `table['A']` 
+  - rows across all columns as `table[4:8]`
+  - or a slice as `list(table.filter('A', 'B', slice(4,8)))`.
+- you to update with `table['A'][2] = new value`
+- you can store or send data using json, by: 
+  - dumping to json: `json_str = table.to_json()`, or 
+  - you can load it with `Table.from_json(json_str)`.
+- Type checking is automatic when you append or replace values. 
 - it checks if the header name is already in use.
 - you can add any type of metadata to the table as `table.metadata['some key'] = 'some value'`
 - you can ask `column_xyz in Table.colums`
@@ -45,7 +52,7 @@ table_as_json = table.to_json()
 # 7. loading from json is easy:
 table2 = Table.from_json(table_as_json)
 
-# 8. for storing in a database, I recommend to zip the json.
+# 8. for storing in a database or on disk, I recommend to zip the json.
 zipped = zlib.compress(table_as_json.encode())
 
 # 9. copying is easy:
@@ -99,6 +106,29 @@ table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in tab
 print(table)
 for row in table.rows:
     print(row)
+
+# but if you just want to view it interactively (or a slice of it), use:
+table.show()
+
++ =====+=====+============= +
+|   A  |  B  |  new column  |
+|  int | str |     str      |
+| False|False|    False     |
++ -----+-----+------------- +
+|     1|hello| (1, 'hello') |
+|    44|Hallo|(44, 'Hallo') |
++ =====+=====+============= +
+
+table.show('A', slice(0,1))
+
++ ===== +
+|   A   |
+|  int  |
+| False |
++ ----- +
+|     1 |
++ ===== +
+
 
 # 21 .updating a column with a function is easy:
 f = lambda x: x * 10
@@ -157,6 +187,8 @@ table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
 
 ```
 
+----------------
+
 ### At this point you know it's a solid bread and butter table. 
 ### No surprises. Now onto the real time savers
 
@@ -169,29 +201,37 @@ Just use `[r for r in table.rows]`, or:
 
 Here's a more practical use case:
 
+(1) Imagine a table with columns a,b,c,d,e (all integers) like this:
 ```
-# 1 .Imagine a table with columns a,b,c,d,e (all integers) like this:
 t = Table()
 _ = [t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)]) for c in 'abcde']
+```
 
-# 2. we want to add two new columns using the functions:
-def f1(a,b,c): return a+b+c+1
-def f2(b,c,d): return b*c*d
+(2) we want to add two new columns using the functions:
+```
+def f1(a,b,c): 
+    return a+b+c+1
+def f2(b,c,d): 
+    return b*c*d
+```
 
-# 3. and we want to compute two new columns 'f' and 'g':
+(3) and we want to compute two new columns `f` and `g`:
+```
 t.add_column(header='f', datatype=int, allow_empty=False)
 t.add_column(header='g', datatype=int, allow_empty=True)
+```
 
-# 4. we can now use the filter, to iterate over the table:
+(4) we can now use the filter, to iterate over the table, and add the values to the two new columns:
+```
 for row in t.filter('a', 'b', 'c', 'd'):
     a, b, c, d = row
 
-    # 4. ... and add the values to the two new columns
     t['f'].append(f1(a, b, c))
     t['g'].append(f2(b, c, d))
 
 assert len(t) == 5
-assert len(t.columns) == len('abcdefg')
+assert list(t.columns) == list('abcdefg')
+
 ```
 
 **_Sort_** supports multi-column sort as simple as `table.sort(**{'A': False, 'B': True, 'C': False})`
@@ -206,7 +246,7 @@ table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
 
 table7.sort(**{'B': False, 'C': False, 'A': False})
 
-table7_sorted = [
+assert list(table7.rows) == [
     (4, 1, 0),
     (8, 1, 0),
     (3, 1, 1),
@@ -216,6 +256,25 @@ table7_sorted = [
     (9, 10, 0),
     (7, 10, 1),
     (None, 100, 1)
+]
+```
+This takes us to filter:
+
+**_Filter_** allows selection of particular rows like: 
+
+    for row in table.filter('b', 'a', 'a', 'c')
+        b,a,a,c = row
+
+So and if you only want a slice, for example column A and B for rows 4-8 from 
+table7, you'd do it like this: `list(table7.filter('A', 'B', slice(4, 8)))`.
+
+Hereby you'd get:
+```
+assert list(table7.filter('A', 'B', slice(4, 8))) == [
+    (1, 10), 
+    (5, 10), 
+    (9, 10), 
+    (7, 10)
 ]
 ```
 As you can see, the table is sorted first by column `B` in ascending order, then
@@ -231,10 +290,6 @@ This gives you a dictionary with the key as a tuple and the indices as a set, e.
         (2, 44): {4,5,32}
     }
 
-**_Filter_** allows selection of particular rows like: 
-
-    for row in table.filter('b', 'a', 'a', 'c')
-        b,a,a,c = row
 
 
 **_All_** allows copy of a table where "all" criteria match.
@@ -251,19 +306,20 @@ filter_2 = lambda x: x > 3
 
 after = table2.all(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] == [(44, 'Hallo')]
+assert list(after.rows) == [(44, 'Hallo')]
 ```
 
-**_Any_** allows copy of a table where "any" criteria match.
+**_Any_** works like `all` except it retrieves where "any" criteria match instead of all.
 
 ```
 after = table2.any(**{'B': filter_1, 'A': filter_2})
 
-assert [r for r in after.rows] == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+assert list(after.rows) == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
 ```
 
+----------------
 
-**_SQL JOINs_** are supported out of the box! 
+**_SQL JOINs_** are supported out of the box. 
 
 Here are a couple of examples:
 
@@ -278,32 +334,41 @@ right.add_column('letter', str, allow_empty=True, data=['a', 'b,', 'c', 'd', Non
 right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'])
 ```
 
-**Left join**
+**Left join** would in SQL be:
+`SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour`
+
+with table it's:
 ```
-# SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
 left_join = left.left_join(right, keys=['colour'], columns=['number', 'letter'])
 ```
 
-**Inner join**
+**Inner join** would in SQL be:
+`SELECT number, letter FROM left JOIN right ON left.colour == right.colour`
+
+with table it's
 ```
-# SELECT number, letter FROM left JOIN right ON left.colour == right.colour
 inner_join = left.inner_join(right, keys=['colour'],  columns=['number','letter'])
 ```
 
 
-**Outer join**
+**Outer join** would in SQL be:
+`SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour`
+
+with table it's:
+
 ```
-# SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
 outer_join = left.outer_join(right, keys=['colour'], columns=['number','letter'])
 ```
 
+----------------
 
+**_GroupBy_** operations are supported using the GroupBy class.
 
-**_GroupBy_** operations are supported using the GroupBy class:
+It allows summarising the data for all of the functions below:
 
 ```
-g = GroupBy(keys=['a', 'b'],
-            functions=[('f', Max),
+g = GroupBy(keys=['a', 'b'],  # <-- Group by these columns
+            functions=[('f', Max),  # <-- find the max on column `f` for each group.
                        ('f', Min),
                        ('f', Sum),
                        ('f', First),
@@ -318,10 +383,28 @@ g = GroupBy(keys=['a', 'b'],
                        ('g', Median)])
 t2 = t + t
 assert len(t2) == 2 * len(t)
+t2.show()
+
++ =====+=====+=====+=====+=====+=====+===== +
+|   a  |  b  |  c  |  d  |  e  |  f  |  g   |
+|  int | int | int | int | int | int | int  |
+| False|False|False|False|False|False| True |
++ -----+-----+-----+-----+-----+-----+----- +
+|     0|    0|    0|    0|    0|    1|    0 |
+|     1|    1|    1|    1|    1|    4|    1 |
+|     2|    2|    2|    2|    2|    7|    8 |
+|     3|    3|    3|    3|    3|   10|   27 |
+|     4|    4|    4|    4|    4|   13|   64 |
+|     0|    0|    0|    0|    0|    1|    0 |
+|     1|    1|    1|    1|    1|    4|    1 |
+|     2|    2|    2|    2|    2|    7|    8 |
+|     3|    3|    3|    3|    3|   10|   27 |
+|     4|    4|    4|    4|    4|   13|   64 |
++ =====+=====+=====+=====+=====+=====+===== +
 
 g += t2
 
-g_out = [
+assert list(g.rows) == [
     (0, 0, 1, 1, 2, 1, 1, 2, 1, 1.0, 0.0, 0.0, 1, 1, 0),
     (1, 1, 4, 4, 8, 4, 4, 2, 1, 4.0, 0.0, 0.0, 4, 4, 1),
     (2, 2, 7, 7, 14, 7, 7, 2, 1, 7.0, 0.0, 0.0, 7, 7, 8),
@@ -329,48 +412,62 @@ g_out = [
     (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
 ]
 
-for row in g.rows:
-    g_out.remove(row)
-assert not g_out  # g_out is empty.
+g.show()
+
++ =====+=====+======+======+======+========+=======+========+==============+==========+====================+====================+=========+=======+========= +
+|   a  |  b  |Max(f)|Min(f)|Sum(f)|First(f)|Last(f)|Count(f)|CountUnique(f)|Average(f)|StandardDeviation(f)|StandardDeviation(a)|Median(f)|Mode(f)|Median(g) |
+|  int | int | int  | int  | int  |  int   |  int  |  int   |     int      |  float   |       float        |       float        |   int   |  int  |   int    |
+| False|False| True | True | True |  True  |  True |  True  |     True     |   True   |        True        |        True        |   True  |  True |   True   |
++ -----+-----+------+------+------+--------+-------+--------+--------------+----------+--------------------+--------------------+---------+-------+--------- +
+|     0|    0|     1|     1|     2|       1|      1|       2|             1|       1.0|                 0.0|                 0.0|        1|      1|        0 |
+|     1|    1|     4|     4|     8|       4|      4|       2|             1|       4.0|                 0.0|                 0.0|        4|      4|        1 |
+|     2|    2|     7|     7|    14|       7|      7|       2|             1|       7.0|                 0.0|                 0.0|        7|      7|        8 |
+|     3|    3|    10|    10|    20|      10|     10|       2|             1|      10.0|                 0.0|                 0.0|       10|     10|       27 |
+|     4|    4|    13|    13|    26|      13|     13|       2|             1|      13.0|                 0.0|                 0.0|       13|     13|       64 |
++ =====+=====+======+======+======+========+=======+========+==============+==========+====================+====================+=========+=======+========= +
+
+
 ```
  
 Note that groupby is instantiated on it's own, without any data, and then
 data is added using `+=` ? That's because I wanted the GroupBy class to be
-friendly to updates that otherwise might run out of memory.
+friendly to updates that otherwise might run out of memory. Here's the case:
 
-Here's the case:
+(1) Imagine you have a large number of files that you want to summarize.
 
+For this you first need a groupby operation:
 ```
-# 1. Imagine you have a large number of files that you want to summarize.
-#    For this you first need a groupby operation:
-
 g = GroupBy(keys=['a','b'], functions=[('c', StandardDeviation), ('d', Average)])
+```
 
-# 2. now you can just iterate over the files and not having to worry about 
-#    the memory footprint:
-
+(2) now you can just iterate over the files and not having to worry about 
+the memory footprint, as each table is consumed by the groupby function:
+```
 files = Path(__file__).parent / 'archive'
 assert files.isdir()  
 for file in files.iterdir():
     json_str = json.loads(file.read())
     table = Table.from_json(json)
     g += table
-
-# 3. Once all files have been summarized, you can read the results using
-#    Pythons friendly for loop:
-
-for a, b, stdev, avg in g.rows:
-     ...
-
 ```
 
+(3) Once all files have been summarized, you can read the results using
+Pythons friendly for loop:
+```
+for a, b, stdev, avg in g.rows:
+     # ... do something ...
+```
+
+
+---------------------
+
+
+
 This concludes the mega-tutorial to `tablite`. There's nothing more to it.
-But oh buy it'll save a lot of time.
+But oh boy it'll save a lot of time.
 
 All code snippets are available in the [example.py](example.py) and on from 
 pypi as `pip install tablite`
-
-
 
 
 
