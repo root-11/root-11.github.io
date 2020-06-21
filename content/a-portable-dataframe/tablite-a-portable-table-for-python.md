@@ -412,7 +412,7 @@ assert list(g.rows) == [
     (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
 ]
 
-g.show()
+g.table.show()
 
 + =====+=====+======+======+======+========+=======+========+==============+==========+====================+====================+=========+=======+========= +
 |   a  |  b  |Max(f)|Min(f)|Sum(f)|First(f)|Last(f)|Count(f)|CountUnique(f)|Average(f)|StandardDeviation(f)|StandardDeviation(a)|Median(f)|Mode(f)|Median(g) |

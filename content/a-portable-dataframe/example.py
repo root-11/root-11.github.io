@@ -1081,22 +1081,32 @@ class GroupBy(object):
                 f.update(d[h])
         return self
 
-    def show(self):
+    def _generate_table(self):
+        for key, functions in self.data.items():
+            row = key + tuple(fn.value for fn in functions)
+            self.output.add_row(row)
+        self.data.clear()  # hereby we only create the table once.
+
+    @property
+    def table(self):
         if self.output is None:
-            raise Exception("GroupBy.rows has not been called.")
+            return None
+
+        if self.data:
+            self._generate_table()
+
         assert isinstance(self.output, Table)
-        self.output.show()
+        return self.output
 
     @property
     def rows(self):
         if self.output is None:
             return None
 
-        for key, functions in self.data.items():
-            row = key + tuple(fn.value for fn in functions)
-            self.output.add_row(row)
-        self.data.clear()  # hereby we only create the table one.
+        if self.data:
+            self._generate_table()
 
+        assert isinstance(self.output, Table)
         for row in self.output.rows:
             yield row
 
@@ -1129,7 +1139,7 @@ assert list(g.rows) == [
     (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
 ]
 
-g.show()
+g.table.show()
 
 
 
