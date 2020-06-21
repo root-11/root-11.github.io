@@ -230,14 +230,14 @@ class Table(object):
             assert isinstance(col, Column)
             c_lens[h] = max([len(col.header), len(str(col.datatype.__name__)), len(str(False))] + [len(str(v)) for v in col[slc]])
 
-        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+")
-        print("|", "|".join([h.center(c_lens[h], " ") for h in headers]), "|")
-        print("|", "|".join([self.columns[h].datatype.__name__.center(c_lens[h], " ") for h in headers]), "|")
-        print("|", "|".join([str(self.columns[h].allow_empty).center(c_lens[h], " ") for h in headers]), "|")
-        print("+", "+".join(["-" * c_lens[h] for h in headers]), "+")
+        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+", sep="")
+        print("|", "|".join([h.center(c_lens[h], " ") for h in headers]), "|", sep="")
+        print("|", "|".join([self.columns[h].datatype.__name__.center(c_lens[h], " ") for h in headers]), "|", sep="")
+        print("|", "|".join([str(self.columns[h].allow_empty).center(c_lens[h], " ") for h in headers]), "|", sep="")
+        print("+", "+".join(["-" * c_lens[h] for h in headers]), "+", sep="")
         for row in self.filter(*tuple(headers) + (slc, )):
-            print("|", "|".join([str(v).rjust(c_lens[h]) for v, h in zip(row, headers)]), "|")
-        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+")
+            print("|", "|".join([str(v).rjust(c_lens[h]) for v, h in zip(row, headers)]), "|", sep="")
+        print("+", "+".join(["=" * c_lens[h] for h in headers]), "+", sep="")
 
     def copy(self):
         return self.__copy__()
