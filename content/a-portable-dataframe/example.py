@@ -731,6 +731,8 @@ for row in t.filter('a', 'b', 'c', 'd'):
 
 assert len(t) == 5
 assert list(t.columns) == list('abcdefg')
+t.show()
+
 
 # slicing is easy:
 table_chunk = table2[2:4]
@@ -1079,6 +1081,12 @@ class GroupBy(object):
                 f.update(d[h])
         return self
 
+    def show(self):
+        if self.output is None:
+            raise Exception("GroupBy.rows has not been called.")
+        assert isinstance(self.output, Table)
+        self.output.show()
+
     @property
     def rows(self):
         if self.output is None:
@@ -1109,6 +1117,7 @@ g = GroupBy(keys=['a', 'b'],
                        ('g', Median)])
 t2 = t + t
 assert len(t2) == 2 * len(t)
+t2.show()
 
 g += t2
 
@@ -1120,7 +1129,7 @@ assert list(g.rows) == [
     (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
 ]
 
-
+g.show()
 
 
 
