@@ -360,6 +360,7 @@ class Table(object):
 
         for row in table.rows:
             print(row)
+
         """
         for ix in range(len(self)):
             item = tuple(c[ix] if ix < len(c) else None for c in self.columns.values())
@@ -372,12 +373,12 @@ class Table(object):
             idx[key].add(ix)
         return idx
 
-    def sort(self, **kwargs):
-        """ Perform multi-pass sorting with precedence given order of column names.
-        :param kwargs: keys: columns, values: 'reverse' as boolean.
-        """
+    def _sort_index(self, **kwargs):
         if not isinstance(kwargs, dict):
             raise ValueError("Expected keyword arguments")
+        if not kwargs:
+            kwargs = {c: False for c in self.columns}
+
         for k, v in kwargs.items():
             if k not in self.columns:
                 raise ValueError(f"no column {k}")
@@ -400,9 +401,22 @@ class Table(object):
         rank.clear()  # free memory.
         new_order.clear()
 
+        return sorted_index
+
+    def sort(self, **kwargs):
+        """ Perform multi-pass sorting with precedence given order of column names.
+        :param kwargs: keys: columns, values: 'reverse' as boolean.
+        """
+        sorted_index = self._sort_index(**kwargs)
         for col_name, col in self.columns.items():
             assert isinstance(col, Column)
             col.replace(values=[col[ix] for ix in sorted_index])
+
+    def is_sorted(self, **kwargs):
+        sorted_index = self._sort_index(**kwargs)
+        if any(ix != i for ix, i in enumerate(sorted_index)):
+            return False
+        return True
 
     def filter(self, *items):
         """ enables iteration on a limited number of headers:
@@ -841,7 +855,12 @@ table7 = Table()
 table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
 table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
 table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
-table7.sort(**{'B': False, 'C': False, 'A': False})
+
+assert not table7.is_sorted()
+
+sort_order = {'B': False, 'C': False, 'A': False}
+
+table7.sort(**sort_order)
 
 assert list(table7.rows) == [
     (4, 1, 0),
@@ -856,6 +875,8 @@ assert list(table7.rows) == [
 ]
 
 assert list(table7.filter('A', 'B', slice(4, 8))) == [(1, 10), (5, 10), (9, 10), (7, 10)]
+
+assert table7.is_sorted(**sort_order)
 
 
 class GroupbyFunction(object):
@@ -1162,8 +1183,9 @@ class GroupBy(object):
         if any(i not in self.output.columns for i in columns):
             raise ValueError(f"column not found in groupby: {[i not in self.output.columns for i in columns]}")
 
-        # if not self.output.is_sorted():  # todo
-        #     self.output.sort()
+        sort_order = {k: False for k in self.keys}
+        if not self.output.is_sorted(**sort_order):
+            self.output.sort(**sort_order)
 
         t = Table()
         for col_name, col in self.output.columns.items():  # add vertical groups.
