@@ -1135,7 +1135,7 @@ class GroupBy(object):
         for row in self.output.rows:
             yield row
 
-    def pivot(self, columns, values_as_rows=True):
+    def pivot(self, columns):
         """ pivots the groupby so that `columns` become new columns.
 
         :param args: column names
@@ -1144,29 +1144,31 @@ class GroupBy(object):
 
         Example:
         g.show()
-        +=====+=====+=====+======+
-        |  a  |  b  |  c  |sum(g)|
-        | int | int | int | int  |
-        |False|False|False|False |
-        +-----+-----+-----+------+
-        |    0|    0|    0|    10|
-        |    0|    1|    1|    11|
-        |    0|    2|    1|    12|
-        |    1|    1|    1|    14|
-        |    1|    1|    2|    13|
-        +=====+=====+=====+======+
+        +=====+=====+======+======+
+        |  a  |  b  |Max(f)|Sum(f)|
+        | int | int | int  | int  |
+        |False|False| True | True |
+        +-----+-----+------+------+
+        |    0|    0|     1|     3|
+        |    1|    1|     4|    12|
+        |    2|    2|     7|    21|
+        |    3|    3|    10|    30|
+        |    4|    4|    13|    39|
+        +=====+=====+======+======+
 
-        g.pivot('c')
-        +=====+=====+==========+===========+
-        |  a  |  b  |sum(g,c=0)| max(g,c=0)|
-        | int | int |   int    |     int   |  ...
-        |False|False|   True   |    True   |
-        +-----+-----+----------+-----------+
-        |    0|    0|       10|            |
-        |    0|    1|         |          11|
-        |    0|    2|         |          12|
-        |    1|    1|         |          14|
-        +=====+=====+======+=====+============+============+
+        g.pivot('b')
+        +=====+==========+==========+==========+==========+==========+==========+==========+==========+==========+==========+
+        |  a  |Max(f,b=0)|Sum(f,b=0)|Max(f,b=1)|Sum(f,b=1)|Max(f,b=2)|Sum(f,b=2)|Max(f,b=3)|Sum(f,b=3)|Max(f,b=4)|Sum(f,b=4)|
+        | int |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |
+        |False|   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |
+        +-----+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+
+        |    0|         1|         3|      None|      None|      None|      None|      None|      None|      None|      None|
+        |    1|      None|      None|         4|        12|      None|      None|      None|      None|      None|      None|
+        |    2|      None|      None|      None|      None|         7|        21|      None|      None|      None|      None|
+        |    3|      None|      None|      None|      None|      None|      None|        10|        30|      None|      None|
+        |    4|      None|      None|      None|      None|      None|      None|      None|      None|        13|        39|
+        +=====+==========+==========+==========+==========+==========+==========+==========+==========+==========+==========+
+
         """
         if not isinstance(columns, list):
             raise TypeError(f"expected columns as list, not {type(columns)}")
