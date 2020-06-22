@@ -6,13 +6,13 @@ from collections import defaultdict
 
 
 class DataTypes(object):
-    str = str
+    int = int
     float = float
     bool = bool
-    int = int
     date = date
     time = time
     datetime = datetime
+    str = str
     # alias for private labels
     text = str
     decimal = float
@@ -21,6 +21,8 @@ class DataTypes(object):
 
     # reserved keyword for None in JavaScript:
     none = 'null'
+
+    types = [int,float,bool,str,date,time,datetime]
 
     @staticmethod
     def to_json(v):
@@ -278,6 +280,9 @@ class Table(object):
 
     def __contains__(self, item):
         return item in self.columns
+
+    def __iter__(self):
+        raise AttributeError("use Table.rows or Table.columns")
 
     def __getitem__(self, item):
         """ returns rows as a tuple """
@@ -1261,4 +1266,99 @@ pivot_table = g2.pivot(columns=['b'])
 pivot_table.show()
 
 
+# reading and writing data.
+# --------------------------
+headers = ", ".join([c for c in table7.columns])
+data = [headers]
+for row in table7.rows:
+    data.append(", ".join(str(v) for v in row))
+
+from pathlib import Path
+csv_file = Path(__file__).parent / "csvfile.csv"
+s = "\n".join(data)
+csv_file.write_text(s)
+
+print(s)
+
+
+def split_by_sequence(text, sequence):
+    chunks = tuple()
+    for element in sequence:
+        idx = text.find(element)
+        if idx < 0:
+            raise ValueError(f"'{element}' not in row")
+        chunk, text = text[:idx], text[len(element) + idx:]
+        chunks += (chunk, )
+    chunks += (text, )  # the remaining text.
+    return chunks
+
+
+def text_reader(path, split_sequence=None, sep=",", end="\r\n"):
+    if not isinstance(path, Path):
+        raise ValueError(f"expected pathlib.Path, got {type(path)}")
+
+    t = Table()
+    for line in path.open(newline=end):
+        line = line.rstrip(end)
+        if split_sequence:
+            values = split_by_sequence(line, split_sequence)
+        else:
+            values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
+
+        if not t.columns:
+            for v in values:
+                t.add_column(v, datatype=str, allow_empty=True)
+        else:
+            t.add_row(values)
+    return t
+
+
+tr_table = text_reader(csv_file)
+
+tr_table.show()
+
+
+def find_format(table):
+    assert isinstance(table, Table)
+
+    nones = {'None', 'Null', ""}
+
+    for col_name, column in table.columns.items():
+        values = set(column)
+
+        ni = nones.intersection(values)
+        if ni:
+            column.allow_empty = True
+            for i in ni:
+                values.remove(i)
+        else:
+            column.allow_empty = False
+
+        works = []
+        for dtype in DataTypes.types:
+            if dtype == column.datatype:
+                continue
+            for v in values:
+                try:
+                    dtype(v)
+                except TypeError:
+                    break
+            # if nothing failed this far, it works.
+            works.append(dtype)
+        if not works:  # if nothing works ...
+            continue
+        else:
+            dtype = works[0]
+            column.datatype = dtype
+            column.replace([dtype(v) if v not in nones else None for v in column])
+
+find_format(tr_table)
+
+try:
+    for i in tr_table:
+        raise Exception("this should raise ValueError: use Table.rows or Table.columns")
+except AttributeError:
+    assert True
+
+assert tr_table == table7
 
