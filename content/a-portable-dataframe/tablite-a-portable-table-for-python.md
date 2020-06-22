@@ -10,7 +10,7 @@ So what do we do? We write a custom built class for the problem at hand and
 discover that we've just spent 3 hours doing something that should have taken
 20 minutes.
 
-### Now more! ...Enter: [tablite](https://pypi.org/tablite)
+### No more! ...Enter: [tablite](https://pypi.org/tablite)
 A python library for tables that does everything you need.
 
 - it handles all datatypes: str,float,bool,int,date,datetime,time.
@@ -426,7 +426,6 @@ g.table.show()
 |     4|    4|    13|    13|    26|      13|     13|       2|             1|      13.0|                 0.0|                 0.0|       13|     13|       64 |
 + =====+=====+======+======+======+========+=======+========+==============+==========+====================+====================+=========+=======+========= +
 
-
 ```
  
 Note that groupby is instantiated on it's own, without any data, and then
@@ -456,6 +455,44 @@ Pythons friendly for loop:
 ```
 for a, b, stdev, avg in g.rows:
      # ... do something ...
+```
+
+**Pivot Table** included in the groupby? Yes. You can pivot the groupby on any
+column that is used for grouping. Here's a simple example:
+
+```
+g2 = GroupBy(keys=['a', 'b'], functions=[('f', Max), ('f', Sum)])
+g2 += t + t + t
+
+g2.table.show()
+
++=====+=====+======+======+
+|  a  |  b  |Max(f)|Sum(f)|
+| int | int | int  | int  |
+|False|False| True | True |
++-----+-----+------+------+
+|    0|    0|     1|     3|
+|    1|    1|     4|    12|
+|    2|    2|     7|    21|
+|    3|    3|    10|    30|
+|    4|    4|    13|    39|
++=====+=====+======+======+
+
+pivot_table = g2.pivot(columns=['b'])
+
+pivot_table.show()
+
++=====+==========+==========+==========+==========+==========+==========+==========+==========+==========+==========+
+|  a  |Max(f,b=0)|Sum(f,b=0)|Max(f,b=1)|Sum(f,b=1)|Max(f,b=2)|Sum(f,b=2)|Max(f,b=3)|Sum(f,b=3)|Max(f,b=4)|Sum(f,b=4)|
+| int |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |   int    |
+|False|   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |   True   |
++-----+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+
+|    0|         1|         3|      None|      None|      None|      None|      None|      None|      None|      None|
+|    1|      None|      None|         4|        12|      None|      None|      None|      None|      None|      None|
+|    2|      None|      None|      None|      None|         7|        21|      None|      None|      None|      None|
+|    3|      None|      None|      None|      None|      None|      None|        10|        30|      None|      None|
+|    4|      None|      None|      None|      None|      None|      None|      None|      None|        13|        39|
++=====+==========+==========+==========+==========+==========+==========+==========+==========+==========+==========+
 ```
 
 
