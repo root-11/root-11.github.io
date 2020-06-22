@@ -376,6 +376,8 @@ class Table(object):
         """ Perform multi-pass sorting with precedence given order of column names.
         :param kwargs: keys: columns, values: 'reverse' as boolean.
         """
+        if not isinstance(kwargs, dict):
+            raise ValueError("Expected keyword arguments")
         for k, v in kwargs.items():
             if k not in self.columns:
                 raise ValueError(f"no column {k}")
@@ -562,7 +564,6 @@ class Table(object):
             inner_join.add_column(col_name, col.datatype, allow_empty=True)
 
         key_union = set(left.filter(*keys)).intersection(set(right.filter(*keys)))
-        assert key_union == {('white',), ('blue',)}
 
         left_ixs = left.index(*keys)
         right_ixs = right.index(*keys)
@@ -799,6 +800,8 @@ table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
                                  'A_2': 'product.sku',
                                  'A_4': 'locations.sender'}
 
+# todo: check that metadata travels in json too.
+
 # doing lookups is supported by indexing:
 table6 = Table()
 table6.add_column('A', str, data=['Alice', 'Bob', 'Bob', 'Ben', 'Charlie', 'Ben', 'Albert'])
@@ -826,11 +829,11 @@ left_join = left.left_join(right, keys=['colour'], columns=['number', 'letter'])
 
 # inner join
 # SELECT number, letter FROM left JOIN right ON left.colour == right.colour
-inner_join = left.inner_join(right, keys=['colour'],  columns=['number','letter'])
+inner_join = left.inner_join(right, keys=['colour'], columns=['number', 'letter'])
 
 # outer join
 # SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
-outer_join = left.outer_join(right, keys=['colour'], columns=['number','letter'])
+outer_join = left.outer_join(right, keys=['colour'], columns=['number', 'letter'])
 
 
 # Sortation
@@ -1086,6 +1089,7 @@ class GroupBy(object):
             row = key + tuple(fn.value for fn in functions)
             self.output.add_row(row)
         self.data.clear()  # hereby we only create the table once.
+        self.output.sort(**{k: False for k in self.keys})
 
     @property
     def table(self):
@@ -1109,6 +1113,88 @@ class GroupBy(object):
         assert isinstance(self.output, Table)
         for row in self.output.rows:
             yield row
+
+    def pivot(self, columns, values_as_rows=True):
+        """ pivots the groupby so that `columns` become new columns.
+
+        :param args: column names
+        :param values_as_rows: boolean, if False: values as columns.
+        :return: New Table
+
+        Example:
+        g.show()
+        +=====+=====+=====+======+
+        |  a  |  b  |  c  |sum(g)|
+        | int | int | int | int  |
+        |False|False|False|False |
+        +-----+-----+-----+------+
+        |    0|    0|    0|    10|
+        |    0|    1|    1|    11|
+        |    0|    2|    1|    12|
+        |    1|    1|    1|    14|
+        |    1|    1|    2|    13|
+        +=====+=====+=====+======+
+
+        g.pivot('c')
+        +=====+=====+==========+===========+
+        |  a  |  b  |sum(g,c=0)| max(g,c=0)|
+        | int | int |   int    |     int   |  ...
+        |False|False|   True   |    True   |
+        +-----+-----+----------+-----------+
+        |    0|    0|       10|            |
+        |    0|    1|         |          11|
+        |    0|    2|         |          12|
+        |    1|    1|         |          14|
+        +=====+=====+======+=====+============+============+
+        """
+        if not isinstance(columns, list):
+            raise TypeError(f"expected columns as list, not {type(columns)}")
+        if not all(isinstance(i,str) for i in columns):
+            raise TypeError(f"column name not str: {[i for i in columns if not isinstance(i,str)]}")
+
+        if self.output is None:
+            return None
+
+        if self.data:
+            self._generate_table()
+
+        assert isinstance(self.output, Table)
+        if any(i not in self.output.columns for i in columns):
+            raise ValueError(f"column not found in groupby: {[i not in self.output.columns for i in columns]}")
+
+        # if not self.output.is_sorted():  # todo
+        #     self.output.sort()
+
+        t = Table()
+        for col_name, col in self.output.columns.items():  # add vertical groups.
+            if col_name in self.keys and col_name not in columns:
+                t.add_column(col_name, col.datatype, allow_empty=False)
+
+        tup_length = 0
+        for column_key in self.output.filter(*columns):  # add horizontal groups.
+            col_name = ",".join(f"{h}={v}" for h, v in zip(columns, column_key))  # expressed "a=0,b=3" in column name "Sum(g, a=0,b=3)"
+            for (header, function), function_instances in zip(self.groupby_functions, self.function_classes):
+                t.add_column(f"{function.__name__}({header},{col_name})", datatype=function_instances.datatype, allow_empty=True)
+                tup_length += 1
+
+        # add rows.
+        key_index = {k: i for i, k in enumerate(self.output.columns)}
+        old_v_keys = tuple(None for k in self.keys if k not in columns)
+
+        for row in self.output.rows:
+            v_keys = tuple(row[key_index[k]] for k in self.keys if k not in columns)
+            if v_keys != old_v_keys:
+                t.add_row(v_keys + tuple(None for i in range(tup_length)))
+                old_v_keys = v_keys
+
+            function_values = [v for h, v in zip(self.output.columns, row) if h not in self.keys]
+
+            col_name = ",".join(f"{h}={row[key_index[h]]}" for h in columns)
+            for (header, function), fi in zip(self.groupby_functions, function_values):
+                column_key = f"{function.__name__}({header},{col_name})"
+                t[column_key][-1] = fi
+
+        return t
 
 
 g = GroupBy(keys=['a', 'b'],
@@ -1140,6 +1226,15 @@ assert list(g.rows) == [
 ]
 
 g.table.show()
+
+g2 = GroupBy(keys=['a', 'b'], functions=[('f', Max), ('f', Sum)])
+g2 += t + t + t
+
+g2.table.show()
+
+pivot_table = g2.pivot(columns=['b'])
+
+pivot_table.show()
 
 
 
