@@ -2,32 +2,26 @@ import zlib
 import json
 from itertools import count
 from datetime import datetime, date, time
+from functools import lru_cache
 from collections import defaultdict
+from pathlib import Path
 
 
 class DataTypes(object):
+    # reserved keyword for Nones:
+    nones = {'null', 'Null', 'NULL', '#N/A', '#n/a', "", 'None', None}
     int = int
+    str = str
     float = float
     bool = bool
     date = date
-    time = time
     datetime = datetime
-    str = str
-    # alias for private labels
-    text = str
-    decimal = float
-    boolean = bool
-    integer = int
-
-    # reserved keyword for None in JavaScript:
-    none = 'null'
-
-    types = [int, float, bool, str, date, time, datetime]
+    time = time
 
     @staticmethod
     def to_json(v):
         if v is None:
-            return DataTypes.none
+            return v
         if isinstance(v, int):
             return v
         elif isinstance(v, str):
@@ -47,7 +41,7 @@ class DataTypes(object):
 
     @staticmethod
     def from_json(v, dtype):
-        if v == DataTypes.none:
+        if v in DataTypes.nones:
             return None
         if dtype is int:
             return int(v)
@@ -65,6 +59,96 @@ class DataTypes(object):
             return time.fromisoformat(v)
         else:
             raise TypeError(f"The datatype {str(dtype)} is not supported.")
+
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def infer(v, dtype):
+        if v is DataTypes.nones:
+            return None
+        if dtype is int:
+            return DataTypes._int(v)
+        elif dtype is str:
+            return DataTypes._str(v)
+        elif dtype is float:
+            return DataTypes._float(v)
+        elif dtype is bool:
+            return DataTypes._bool(v)
+        elif dtype is date:
+            return DataTypes._date(v)
+        elif dtype is datetime:
+            return DataTypes._datetime(v)
+        elif dtype is time:
+            return DataTypes._time(v)
+        else:
+            raise TypeError(f"The datatype {str(dtype)} is not supported.")
+
+    @staticmethod
+    def _bool(value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            if value in "TruetrueTRUE":
+                return True
+            elif value in "FalsefalseFALSE":
+                return False
+            else:
+                raise ValueError
+
+    @staticmethod
+    def _int(value):
+        if isinstance(value, int):
+            return value
+        elif isinstance(value, str):
+            return int(float(value))
+        else:
+            raise ValueError
+
+    @staticmethod
+    def _float(value):
+        if isinstance(value, float):
+            return value
+        elif isinstance(value, str):
+            return float(value)
+        else:
+            raise ValueError
+
+    @staticmethod
+    def _date(value):
+        if isinstance(value, date):
+            return value
+        elif isinstance(value, str):
+            return date.fromisoformat(value)
+        else:
+            raise ValueError
+
+    @staticmethod
+    def _datetime(value):
+        if isinstance(value, datetime):
+            return value
+        elif isinstance(value, str):
+            return datetime.fromisoformat(value)
+        else:
+            raise ValueError
+
+    @staticmethod
+    def _time(value):
+        if isinstance(value, time):
+            return value
+        elif isinstance(value, str):
+            return time.fromisoformat(value)
+        else:
+            raise ValueError
+
+    @staticmethod
+    def _str(value):
+        if isinstance(value, str):
+            return value
+        else:
+            return str(value)
+
+    # Order is very important!
+    types = [datetime, date, time, int, float, bool, str]
 
 
 class Column(list):
@@ -348,9 +432,10 @@ class Table(object):
                     raise ValueError(f"Column {name} not in other")
                 col2 = b.columns[name]
                 if col.datatype != col2.datatype:
-                    raise ValueError(f"Column {name}.datatype different")
+                    raise ValueError(f"Column {name}.datatype different: {col.datatype}, {col2.datatype}")
                 if col.allow_empty != col2.allow_empty:
                     raise ValueError(f"Column {name}.allow_empty is different")
+        return True
 
     def __iadd__(self, other):
         """ enables Table_1 += Table_2 """
@@ -695,7 +780,7 @@ assert table == table2 == table3
 # even if you only want to check metadata:
 table.compare(table3)  # will raise exception if they're different.
 
-# + also work:
+# append is easy as + also work:
 table3x2 = table3 + table3
 assert len(table3x2) == len(table3) * 2
 
@@ -719,7 +804,13 @@ table['B'][last_row] = "Hallo"
 
 assert table != table2
 
-# append is easy:
+# if you try to loop and forget the direction, Table will tell you
+try:
+    for row in table: # wont pass
+        assert False, "not possible. Use for row in table.rows or for column in table.columns"
+except AttributeError:
+    assert True
+
 _ = [table2.add_row(row) for row in table.rows]
 
 before = [r for r in table2.rows]
@@ -807,13 +898,9 @@ now = datetime.now()
 table4 = Table()
 table4.add_column('A', int, False, data=[-1, 1])
 table4.add_column('A', int, True, data=[None, 1])  # None!
-table4.add_column('A', DataTypes.integer, False, data=[-1, 1])
 table4.add_column('A', float, False, data=[-1.1, 1.1])
-table4.add_column('A', DataTypes.decimal, False, data=[-1.1, 1.1])
 table4.add_column('A', str, False, data=["", "1"])
-table4.add_column('A', DataTypes.text, False, data=["", "1"])
 table4.add_column('A', bool, False, data=[False, True])
-table4.add_column('A', DataTypes.boolean, False, data=[False, True])
 table4.add_column('A', datetime, False, data=[now, now])
 table4.add_column('A', date, False, data=[now.date(), now.date()])
 table4.add_column('A', time, False, data=[now.time(), now.time()])
@@ -1281,19 +1368,6 @@ pivot_table.show()
 
 # reading and writing data.
 # --------------------------
-headers = ", ".join([c for c in table7.columns])
-data = [headers]
-for row in table7.rows:
-    data.append(", ".join(str(v) for v in row))
-
-from pathlib import Path
-csv_file = Path(__file__).parent / "csvfile.csv"
-s = "\n".join(data)
-csv_file.write_text(s)
-
-print(s)
-
-
 def split_by_sequence(text, sequence):
     chunks = tuple()
     for element in sequence:
@@ -1301,12 +1375,13 @@ def split_by_sequence(text, sequence):
         if idx < 0:
             raise ValueError(f"'{element}' not in row")
         chunk, text = text[:idx], text[len(element) + idx:]
-        chunks += (chunk, )
-    chunks += (text, )  # the remaining text.
+        chunks += (chunk,)
+    chunks += (text,)  # the remaining text.
     return chunks
 
 
 def text_reader(path, split_sequence=None, sep=",", end="\r\n"):
+    """ txt, tab & csv reader """
     if not isinstance(path, Path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
 
@@ -1326,20 +1401,43 @@ def text_reader(path, split_sequence=None, sep=",", end="\r\n"):
     return t
 
 
-tr_table = text_reader(csv_file)
+def excel_reader(path):
+    if not isinstance(path, Path):
+        raise ValueError(f"expected pathlib.Path, got {type(path)}")
+    raise NotImplementedError
 
-tr_table.show()
+
+def zip_reader(path):
+    if not isinstance(path, Path):
+        raise ValueError(f"expected pathlib.Path, got {type(path)}")
+    raise NotImplementedError
+
+
+def log_reader(path):
+    if not isinstance(path, Path):
+        raise ValueError(f"expected pathlib.Path, got {type(path)}")
+    for line in path.open(newline="\r\n")[:10]:
+        print(repr(line))
+    print("please declare separators. Blank return means 'done'.")
+    split_sequence = []
+    while True:
+        response = input(">")
+        if response == "":
+            break
+        print("got", repr(response))
+        split_sequence.append(response)
+    table = text_reader(path, split_sequence=split_sequence)
+    return table
 
 
 def find_format(table):
+    """ common function for harmonizing formats AFTER import. """
     assert isinstance(table, Table)
-
-    nones = {'None', 'Null', ""}
 
     for col_name, column in table.columns.items():
         values = set(column)
 
-        ni = nones.intersection(values)
+        ni = DataTypes.nones.intersection(values)
         if ni:
             column.allow_empty = True
             for i in ni:
@@ -1349,29 +1447,102 @@ def find_format(table):
 
         works = []
         for dtype in DataTypes.types:
-            if dtype == column.datatype:
+            if dtype is DataTypes.str:
                 continue
+
+            error = False
             for v in values:
                 try:
-                    dtype(v)
-                except TypeError:
+                    v2 = DataTypes.infer(v, dtype)
+
+                    if isinstance(v, str):
+                        # check that reverse conversion also is true,
+                        # otherwise we have loss of precision
+
+                        v3 = str(v2)
+                        if v.lower() != v3.lower():
+                            raise TypeError
+                        v4 = DataTypes.infer(v3, dtype)
+                        if v2 != v4:
+                            raise TypeError
+
+                except (ValueError, TypeError):
+                    error = True
                     break
+            if error:
+                continue
+
             # if nothing failed this far, it works.
             works.append(dtype)
-        if not works:  # if nothing works ...
-            continue
+            break
+        if not works:
+            continue  # if nothing works leave it as it is.
         else:
             dtype = works[0]
             column.datatype = dtype
-            column.replace([dtype(v) if v not in nones else None for v in column])
+            column.replace([DataTypes.infer(v, dtype) if v not in DataTypes.nones else None for v in column])
 
+
+def file_reader(path):
+    assert isinstance(path, Path)
+    readers = {
+        'csv': [text_reader, {'sep': ","}],
+        'txt': [text_reader, {'sep': " "}],
+        'tab': [text_reader, {'sep': '\t'}],
+        'xls': [],
+        'xlsx': [],
+        'xlsm': [],
+        'excelsheet': [],
+        'zip': [],
+        'log': [log_reader, {'sep': None}]
+    }
+
+    extension = path.name.split(".")[-1]
+    reader, kwargs = readers[extension]
+
+    table = reader(path, **kwargs)
+    find_format(table)
+    return table
+
+
+# file reader tests.
+
+headers = ", ".join([c for c in table7.columns])
+data = [headers]
+for row in table7.rows:
+    data.append(", ".join(str(v) for v in row))
+
+csv_file = Path(__file__).parent / "files" / "123.csv"
+s = "\n".join(data)
+print(s)
+csv_file.write_text(s)  # write
+tr_table = file_reader(csv_file)  # read
+csv_file.unlink()  # cleanup
+
+tr_table.show()
 find_format(tr_table)
-
-try:
-    for i in tr_table:
-        raise Exception("this should raise ValueError: use Table.rows or Table.columns")
-except AttributeError:
-    assert True
 
 assert tr_table == table7
 
+
+def test_01():
+    amcap_test_data = Table()
+    for int_type in ['sku', 'quantity', "ti", "hi"]:
+        amcap_test_data.add_column(int_type, int)
+    for float_type in ["L", "W", "H", "weight", ]:
+        amcap_test_data.add_column(float_type, float)
+    for date_type in ["order_date", "ship_date"]:
+        amcap_test_data.add_column(date_type, str)
+    for boolean in ["liquid", "manual", "fragile"]:
+        amcap_test_data.add_column(boolean, bool)
+
+    path = Path(__file__).parent / "files" / 'amcap_test_data.csv'
+    assert path.exists()
+    table = file_reader(path)
+    assert table.compare(amcap_test_data), table.compare(amcap_test_data)
+    assert len(table) == 5
+
+
+for k, v in sorted(globals().items()):
+    if k.startswith('test') and callable(v):
+        v()
