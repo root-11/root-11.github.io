@@ -9,7 +9,10 @@ from pathlib import Path
 
 class DataTypes(object):
     # reserved keyword for Nones:
+    decimals = set('1234567890-+eE.')
+    integers = set('1234567890-+')
     nones = {'null', 'Null', 'NULL', '#N/A', '#n/a', "", 'None', None}
+
     int = int
     str = str
     float = float
@@ -67,24 +70,26 @@ class DataTypes(object):
         if v is DataTypes.nones:
             return None
         if dtype is int:
-            return DataTypes._int(v)
+            return DataTypes._infer_int(v)
         elif dtype is str:
-            return DataTypes._str(v)
+            return DataTypes._infer_str(v)
         elif dtype is float:
-            return DataTypes._float(v)
+            return DataTypes._infer_float(v)
         elif dtype is bool:
-            return DataTypes._bool(v)
+            return DataTypes._infer_bool(v)
         elif dtype is date:
-            return DataTypes._date(v)
+            return DataTypes._infer_date(v)
         elif dtype is datetime:
-            return DataTypes._datetime(v)
+            return DataTypes._infer_datetime(v)
         elif dtype is time:
-            return DataTypes._time(v)
+            return DataTypes._infer_time(v)
         else:
             raise TypeError(f"The datatype {str(dtype)} is not supported.")
 
     @staticmethod
-    def _bool(value):
+    def _infer_bool(value):
+        if isinstance(value, int):
+            raise ValueError("it's an integer.")
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -96,25 +101,53 @@ class DataTypes(object):
                 raise ValueError
 
     @staticmethod
-    def _int(value):
+    def _infer_int(value):
         if isinstance(value, int):
             return value
+        elif isinstance(value, float):
+            return int(value)
         elif isinstance(value, str):
+            if set(value).intersection("Ee."):
+                raise ValueError("it's a float.")
             return int(float(value))
         else:
             raise ValueError
 
     @staticmethod
-    def _float(value):
+    def _infer_float(value):
+        if isinstance(value, int):
+            raise ValueError("it's an integer")
         if isinstance(value, float):
             return value
         elif isinstance(value, str):
-            return float(value)
+            # if it's a string, do also
+            # check that reverse conversion is valid,
+            # otherwise we have loss of precision. F.ex.:
+            # int(0.532) --> 0
+            value_set = set(value)
+
+            if not value_set.issubset(DataTypes.decimals):
+                raise TypeError
+
+            float_value = float(value)
+            if value_set.intersection('Ee') and "." in value_set:  # it's scientific notation.
+                precision = value.lower().index('e') - value.index(".") - 1
+                formatter = "{:." + str(precision) + "e}"
+                reconstructed_input = formatter.format(float_value)
+            elif "." in str(float_value) and not "." in value_set:  # it's potentially an integer.
+                reconstructed_input = str(int(float_value))
+            else:
+                reconstructed_input = str(float_value)
+
+            if value.lower() != reconstructed_input:
+                raise ValueError
+
+            return float_value
         else:
             raise ValueError
 
     @staticmethod
-    def _date(value):
+    def _infer_date(value):
         if isinstance(value, date):
             return value
         elif isinstance(value, str):
@@ -123,7 +156,7 @@ class DataTypes(object):
             raise ValueError
 
     @staticmethod
-    def _datetime(value):
+    def _infer_datetime(value):
         if isinstance(value, datetime):
             return value
         elif isinstance(value, str):
@@ -132,7 +165,7 @@ class DataTypes(object):
             raise ValueError
 
     @staticmethod
-    def _time(value):
+    def _infer_time(value):
         if isinstance(value, time):
             return value
         elif isinstance(value, str):
@@ -141,14 +174,14 @@ class DataTypes(object):
             raise ValueError
 
     @staticmethod
-    def _str(value):
+    def _infer_str(value):
         if isinstance(value, str):
             return value
         else:
             return str(value)
 
     # Order is very important!
-    types = [datetime, date, time, int, float, bool, str]
+    types = [datetime, date, time, int, bool, float, str]
 
 
 class Column(list):
@@ -1435,9 +1468,9 @@ def find_format(table):
     assert isinstance(table, Table)
 
     for col_name, column in table.columns.items():
-        values = set(column)
+        values = set(column)  # reduce the values to the minimum set.
 
-        ni = DataTypes.nones.intersection(values)
+        ni = DataTypes.nones.intersection(values)  # remove known values for None.
         if ni:
             column.allow_empty = True
             for i in ni:
@@ -1446,41 +1479,25 @@ def find_format(table):
             column.allow_empty = False
 
         works = []
-        for dtype in DataTypes.types:
-            if dtype is DataTypes.str:
-                continue
+        for dtype in DataTypes.types:  # try all datatypes.
 
-            error = False
+            if dtype == float:
+                print("!")
+
+            c = 0
             for v in values:
                 try:
-                    v2 = DataTypes.infer(v, dtype)
-
-                    if isinstance(v, str):
-                        # check that reverse conversion also is true,
-                        # otherwise we have loss of precision
-
-                        v3 = str(v2)
-                        if v.lower() != v3.lower():
-                            raise TypeError
-                        v4 = DataTypes.infer(v3, dtype)
-                        if v2 != v4:
-                            raise TypeError
-
+                    DataTypes.infer(v, dtype)
+                    c += 1
                 except (ValueError, TypeError):
-                    error = True
-                    break
-            if error:
-                continue
+                    pass
+            works.append((c, dtype))
 
-            # if nothing failed this far, it works.
-            works.append(dtype)
-            break
-        if not works:
-            continue  # if nothing works leave it as it is.
-        else:
-            dtype = works[0]
-            column.datatype = dtype
-            column.replace([DataTypes.infer(v, dtype) if v not in DataTypes.nones else None for v in column])
+        for c, dtype in works:
+            if c == len(values):
+                column.datatype = dtype
+                column.replace([DataTypes.infer(v, dtype) if v not in DataTypes.nones else None for v in column])
+                break
 
 
 def file_reader(path):
@@ -1507,22 +1524,25 @@ def file_reader(path):
 
 # file reader tests.
 
-headers = ", ".join([c for c in table7.columns])
-data = [headers]
-for row in table7.rows:
-    data.append(", ".join(str(v) for v in row))
+def test_00():
+    headers = ", ".join([c for c in table7.columns])
+    data = [headers]
+    for row in table7.rows:
+        data.append(", ".join(str(v) for v in row))
 
-csv_file = Path(__file__).parent / "files" / "123.csv"
-s = "\n".join(data)
-print(s)
-csv_file.write_text(s)  # write
-tr_table = file_reader(csv_file)  # read
-csv_file.unlink()  # cleanup
+    csv_file = Path(__file__).parent / "files" / "123.csv"
+    s = "\n".join(data)
+    print(s)
+    csv_file.write_text(s)  # write
+    tr_table = file_reader(csv_file)  # read
+    csv_file.unlink()  # cleanup
 
-tr_table.show()
-find_format(tr_table)
+    tr_table.show()
+    find_format(tr_table)
 
-assert tr_table == table7
+    assert tr_table == table7
+
+test_00()
 
 
 def test_01():
@@ -1539,10 +1559,25 @@ def test_01():
     path = Path(__file__).parent / "files" / 'amcap_test_data.csv'
     assert path.exists()
     table = file_reader(path)
+    table.show()
     assert table.compare(amcap_test_data), table.compare(amcap_test_data)
     assert len(table) == 5
 
+test_01()
 
-for k, v in sorted(globals().items()):
-    if k.startswith('test') and callable(v):
-        v()
+
+def test_02():
+    book1_csv = Table()
+    book1_csv.add_column('a', int)
+    for float_type in list('bcdef'):
+        book1_csv.add_column(float_type, float)
+
+    path = Path(__file__).parent / "files" / 'book1.csv'
+    assert path.exists()
+    table = file_reader(path)
+    table.show()
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 45
+
+
+test_02()
