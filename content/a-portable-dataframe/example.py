@@ -335,7 +335,7 @@ class Table(object):
         slices = [i for i in items if isinstance(i, slice)]
         if len(slices) > 2: raise SyntaxError("1 > slices")
         if not slices:
-            slc = slice(0, None, None)
+            slc = slice(0, len(self), None)
         else:
             slc = slices[0]
         assert isinstance(slc, slice)
@@ -567,14 +567,23 @@ class Table(object):
         slices = [i for i in items if isinstance(i, slice)]
         if len(slices) > 2: raise SyntaxError("1 > slices")
         if not slices:
-            slc = slice(0,None,None)
+            slc = slice(None, len(self), None)
         else:
             slc = slices[0]
         assert isinstance(slc, slice)
 
-        start = 0 if slc.start is None else slc.start
-        step = 1 if slc.step is None else slc.step
-        stop = len(self) if slc.stop is None else slc.stop
+        if slc.stop < 0:
+            start = len(self) + slc.stop
+            stop = len(self)
+            step = 1 if slc.step is None else slc.step
+        else:
+            start = 0 if slc.start is None else slc.start
+            stop = slc.stop
+            step = 1 if slc.step is None else slc.step
+
+        # start = 0 if slc.start is None else slc.start
+        # step = 1 if slc.step is None else slc.step
+        # stop = len(self) if slc.stop is None else slc.stop
 
         headers = [i for i in items if isinstance(i, str)]
         if any(h not in self.columns for h in headers): 
@@ -1501,7 +1510,7 @@ def file_reader(path):
     assert isinstance(path, Path)
     readers = {
         'csv': [text_reader, {'sep': ","}],
-        'txt': [text_reader, {'sep': " "}],
+        'txt': [text_reader, {'sep': "\t"}],
         'tab': [text_reader, {'sep': '\t'}],
         'xls': [],
         'xlsx': [],
@@ -1572,9 +1581,63 @@ def test_02():
     path = Path(__file__).parent / "files" / 'book1.csv'
     assert path.exists()
     table = file_reader(path)
-    table.show()
+    table.show(slice(0,10))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 45
 
 
 test_02()
+
+
+def test_03():
+    book1_csv = Table()
+    book1_csv.add_column('a', int)
+    for float_type in list('bcdef'):
+        book1_csv.add_column(float_type, float)
+
+    path = Path(__file__).parent / "files" / 'book1.txt'
+    assert path.exists()
+    table = file_reader(path)
+    table.show(slice(0,10))
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 45
+
+test_03()
+
+
+def test_04():
+    book1_csv = Table()
+    headers = "TestCase,Numerat.,Denom.,Volume,Gross weight,pcs per outer,L (carton),W (carton),H (carton),Effective Casepack per layer (Ti),Effective pcs per layer,Hi (1.20m) CHEP,Hi (2.00m) CHEP,Hi (1.80m) 1-WAY,Effective pieces per 1.275m pallet,Packed pallet height,Total Netto weight,Total Netto Volume,Waste%A"
+    headers = headers.split(",")
+    book1_csv.add_column(headers[0], str)
+    for float_type in headers[1:]:
+        book1_csv.add_column(float_type.rstrip().lstrip(), float)
+
+    path = Path(__file__).parent / "files" / 'box_packer_test_data.csv'
+    assert path.exists()
+    table = file_reader(path)
+    table.show(slice(0, 10))
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 5856, len(table)
+
+test_04()
+
+
+def test_05():
+    book1_csv = Table()
+    headers = "Date,OrderId,Customer,SKU,Qty"
+    headers = headers.split(",")
+    book1_csv.add_column(headers[0], str, allow_empty=True)
+    for float_type in headers[1:4]:
+        book1_csv.add_column(float_type.rstrip().lstrip(), int, allow_empty=True)
+    book1_csv.add_column(headers[-1], float, allow_empty=True)
+
+    path = Path(__file__).parent / "files" / 'empty_column_values.csv'
+    assert path.exists()
+    table = file_reader(path)
+    table.show(slice(0, 10))
+    table.show(slice(-15))
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 53, len(table)
+
+test_05()
