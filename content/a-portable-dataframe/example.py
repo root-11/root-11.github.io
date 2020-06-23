@@ -22,7 +22,7 @@ class DataTypes(object):
     # reserved keyword for None in JavaScript:
     none = 'null'
 
-    types = [int,float,bool,str,date,time,datetime]
+    types = [int, float, bool, str, date, time, datetime]
 
     @staticmethod
     def to_json(v):
@@ -176,7 +176,11 @@ class Table(object):
         if not isinstance(other, Table):
             a, b = self.__class__.__name__, other.__class__.__name__
             raise TypeError(f"cannot compare {a} with {b}")
-        return all([a == b for a, b in zip(self.columns.values(), other.columns.values())])
+        if self.metadata != other.metadata:
+            return False
+        if any(a != b for a, b in zip(self.columns.values(), other.columns.values())):
+            return False
+        return True
 
     def __len__(self):
         """ returns length of longest column."""
@@ -245,12 +249,18 @@ class Table(object):
         return self.__copy__()
 
     def to_json(self):
-        return json.dumps([c.to_json() for c in self.columns.values()])
+        # return json.dumps([c.to_json() for c in self.columns.values()])
+        return json.dumps({
+            'metadata' : self.metadata,
+            'columns': [c.to_json() for c in self.columns.values()]
+        })
 
     @classmethod
     def from_json(cls, json_):
         t = Table()
-        for c in json.loads(json_):
+        data = json.loads(json_)
+        t.metadata = data['metadata']
+        for c in data['columns']:
             col = Column.from_json(c)
             col.header = t.check_for_duplicate_header(col.header)
             t.columns[col.header] = col
@@ -819,7 +829,10 @@ table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
                                  'A_2': 'product.sku',
                                  'A_4': 'locations.sender'}
 
-# todo: check that metadata travels in json too.
+# which also jsonifies without fuzz.
+table5_json = table5.to_json()
+table5_from_json = Table.from_json(table5_json)
+assert table5 == table5_from_json
 
 # doing lookups is supported by indexing:
 table6 = Table()
