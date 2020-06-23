@@ -1481,9 +1481,6 @@ def find_format(table):
         works = []
         for dtype in DataTypes.types:  # try all datatypes.
 
-            if dtype == float:
-                print("!")
-
             c = 0
             for v in values:
                 try:
