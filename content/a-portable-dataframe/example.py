@@ -581,10 +581,6 @@ class Table(object):
             stop = slc.stop
             step = 1 if slc.step is None else slc.step
 
-        # start = 0 if slc.start is None else slc.start
-        # step = 1 if slc.step is None else slc.step
-        # stop = len(self) if slc.stop is None else slc.stop
-
         headers = [i for i in items if isinstance(i, str)]
         if any(h not in self.columns for h in headers): 
             raise ValueError(f"column not found: {[h for h in headers if h not in self.columns]}") 
