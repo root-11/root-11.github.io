@@ -107,8 +107,15 @@ class DataTypes(object):
         elif isinstance(value, float):
             return int(value)
         elif isinstance(value, str):
-            if set(value).intersection("Ee."):
-                raise ValueError("it's a float.")
+            value_set = set(value)
+            if '"' in value_set:
+                value = value.replace('"', '')
+                value_set.remove('"')
+            if value_set - DataTypes.integers:
+                raise ValueError
+            # if value_set.intersection("Ee."):
+            #     raise ValueError("it's a float.")
+
             return int(float(value))
         else:
             raise ValueError
@@ -120,22 +127,59 @@ class DataTypes(object):
         if isinstance(value, float):
             return value
         elif isinstance(value, str):
-            # if it's a string, do also
-            # check that reverse conversion is valid,
-            # otherwise we have loss of precision. F.ex.:
-            # int(0.532) --> 0
+            value = value.replace('"','')
+            dot_index, comma_index = value.find('.'), value.find(',')
+            if 0 < dot_index < comma_index:  # 1.234,567
+                value = value.replace('.', '')  # --> 1234,567
+                value = value.replace(',', '.') # --> 1234.567
+            elif dot_index > comma_index > 0: # 1,234.678
+                value = value.replace(',', '.')
+            elif comma_index and dot_index == -1:
+                value = value.replace(',', '.')
+            else:
+                pass
+
             value_set = set(value)
 
             if not value_set.issubset(DataTypes.decimals):
                 raise TypeError
 
+            # if it's a string, do also
+            # check that reverse conversion is valid,
+            # otherwise we have loss of precision. F.ex.:
+            # int(0.532) --> 0
+
             float_value = float(value)
-            if value_set.intersection('Ee') and "." in value_set:  # it's scientific notation.
-                precision = value.lower().index('e') - value.index(".") - 1
-                formatter = "{:." + str(precision) + "e}"
-                reconstructed_input = formatter.format(float_value)
+            if value_set.intersection('Ee'):  # it's scientific notation.
+                v = value.lower()
+                if v.count('e') != 1:
+                    raise ValueError("only 1 e in scientific notation")
+
+                e = v.find('e')
+                v_float_part = float(v[:e])
+                v_exponent = int(v[e+1:])
+                return float(f"{v_float_part}e{v_exponent}")
+
+                # if "." in v:
+                #     precision = e - v.index(".") - 1
+                # else:
+                #     precision = 0
+                # formatter = "{:." + str(precision) + "e}"
+                # reconstructed_input = formatter.format(float_value)
+                #
+                # e = reconstructed_input.find('e')
+                # r_float_part = float(reconstructed_input[:e])
+                # r_exponent = int(reconstructed_input[e+1:])
+                #
+                # if v_float_part == r_float_part and v_exponent == r_exponent:
+                #     return float_value
+
             elif "." in str(float_value) and not "." in value_set:  # it's potentially an integer.
                 reconstructed_input = str(int(float_value))
+            elif "." in value:
+                precision = len(value) - value.index(".") - 1
+                formatter = '{0:.' + str(precision) + 'f}'
+                reconstructed_input = formatter.format(float_value)
             else:
                 reconstructed_input = str(float_value)
 
@@ -182,6 +226,123 @@ class DataTypes(object):
 
     # Order is very important!
     types = [datetime, date, time, int, bool, float, str]
+
+# integers
+assert DataTypes.infer(1, int) == 1
+assert DataTypes.infer(0, int) == 0
+assert DataTypes.infer(-1, int) == -1
+assert DataTypes.infer('1', int) == 1
+assert DataTypes.infer('0', int) == 0
+assert DataTypes.infer('-1', int) == -1
+assert DataTypes.infer('"1000028"', int) == 1000028
+
+# floats
+assert DataTypes.infer("2932,500", float) == 2932.5
+assert DataTypes.infer("2932.500", float) == 2932.5
+assert DataTypes.infer("2.932,500", float) == 2932.5
+assert DataTypes.infer("2.932e5", float) == 2.932e5
+assert DataTypes.infer("10e5", float) == 10e5
+
+# booleans
+assert DataTypes.infer('true', bool) is True
+assert DataTypes.infer('True', bool) is True
+assert DataTypes.infer('TRUE', bool) is True
+assert DataTypes.infer('false', bool) is False
+assert DataTypes.infer('False', bool) is False
+assert DataTypes.infer('FALSE', bool) is False
+
+# dates
+isodate = date(1990, 1, 1)
+assert DataTypes.infer(isodate.isoformat(), date) == isodate
+assert DataTypes.infer("1990-01-01", date) == date(1990, 1, 1)  # date with minus
+assert DataTypes.infer("2003-09-25",date) == date(2003, 9, 25)
+
+assert DataTypes.infer("09-25-2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("25-09-2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("10-09-2003", date) == date(2003, 10, 9)
+
+assert DataTypes.infer("1990.01.01", date) == date(1990, 1, 1)  # date with dot.
+assert DataTypes.infer("2003.09.25", date) == date(2003, 9, 25)
+assert DataTypes.infer("09.25.2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("25.09.2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("10.09.2003", date) == date(2003, 10, 9)
+
+assert DataTypes.infer("1990/01/01", date) == date(1990, 1, 1)  # date with slash
+assert DataTypes.infer("2003/09/25", date) == date(2003, 9, 25)
+assert DataTypes.infer("09/25/2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("25/09/2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("10/09/2003", date) == date(2003, 10, 9)
+
+assert DataTypes.infer("1990 01 01", date) == date(1990, 1, 1)  # date with space
+assert DataTypes.infer("2003 09 25", date) == date(2003, 9, 25)
+assert DataTypes.infer("09 25 2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("25 09 2003", date) == date(2003, 9, 25)
+assert DataTypes.infer("10 09 2003", date) == date(2003, 10, 9)
+
+assert DataTypes.infer("20030925", date) == date(2003, 9, 25)  # "iso stripped format strip"
+assert DataTypes.infer("19760704", date) == date(1976, 7, 4)  # "random format"),
+
+assert DataTypes.infer('13NOV2017', date) == date(2017, 11, 13) # GH360
+assert DataTypes.infer("7 4 1976", date) == date(1976, 7, 4)
+assert DataTypes.infer("14 jul 1976", date) == date(1976, 7, 14)
+assert DataTypes.infer("4 Jul 1976", date) == date(1976, 7, 4)
+
+# NOT HANDLED - ambiguous formats.
+# ("10 09 03", date(2003, 10, 9), "date with space"),
+# ("25 09 03", date(2003, 9, 25), "date with space"),
+# ("03 25 Sep", date(2003, 9, 25), "strangely ordered date"),
+# ("25 03 Sep", date(2025, 9, 3), "strangely ordered date"),
+# "10-09-03", date(2003, 10, 9),
+# ("10.09.03", date(2003, 10, 9), "date with dot"),
+# ("10/09/03", date(2003, 10, 9), "date with slash"),
+
+# times
+isotime = time(23, 12, 11)
+assert DataTypes.infer(isotime.isoformat(), time) == time(23, 12, 11)
+assert DataTypes.infer("23:12:11", time) == time(23, 12, 11)
+assert DataTypes.infer("23:12:11.123456", time) == time(23, 12, 11, 123456)
+
+# datetimes
+isodatetime = datetime.now()
+assert DataTypes.infer(isodatetime.isoformat()) == isodatetime
+assert DataTypes.infer("1990-01-01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11)  # iso minus T no microsecond
+assert DataTypes.infer("1990-01-01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  #
+assert DataTypes.infer("1990/01/01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso slash T
+assert DataTypes.infer("1990 01 01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space T
+assert DataTypes.infer("1990-01-01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space
+assert DataTypes.infer("1990/01/01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso slash
+assert DataTypes.infer("1990 01 01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space
+
+assert DataTypes.infer("2003-09-25T10:49:41", datetime) == datetime(2003, 9, 25, 10, 49, 41)  # iso minus T fields omitted.
+assert DataTypes.infer("2003-09-25T10:49", datetime) == datetime(2003, 9, 25, 10, 49)
+assert DataTypes.infer("2003-09-25T10", datetime) == datetime(2003, 9, 25, 10)
+
+assert DataTypes.infer("20030925T104941", datetime) == datetime(2003, 9, 25, 10, 49, 41)  # iso nospace T fields omitted.
+assert DataTypes.infer("20030925T1049", datetime) == datetime(2003, 9, 25, 10, 49, 0)
+assert DataTypes.infer("20030925T10", datetime) == datetime(2003, 9, 25, 10)
+
+assert DataTypes.infer("199709020908", datetime) == datetime(1997, 9, 2, 9, 8)
+assert DataTypes.infer("19970902090807", datetime) == datetime(1997, 9, 2, 9, 8, 7)
+assert DataTypes.infer("2003-09-25 10:49:41,502", datetime) == datetime(2003, 9, 25, 10, 49, 41, 502000)  # python logger format
+assert DataTypes.infer('0099-01-01T00:00:00', datetime) == datetime(99, 1, 1, 0, 0)  # 99 ad
+assert DataTypes.infer('0031-01-01T00:00:00', datetime) == datetime(31, 1, 1, 0, 0)  # 31 ad
+assert DataTypes.infer("20080227T21:26:01.123456789", datetime) == datetime(2008, 2, 27, 21, 26, 1, 123456)  # high precision seconds
+
+# NOT HANDLED. ambiguous format.
+# ("950404 122212", datetime(1995, 4, 4, 12, 22, 12), "random format"),
+
+# NOT HANDLED. locale dependent.
+# ("Thu Sep 25 10:36:28 2003", datetime(2003, 9, 25, 10, 36, 28), "date command format strip"),
+# ("Thu Sep 25 2003", datetime(2003, 9, 25), "date command format strip"),
+# ("  July   4 ,  1976   12:01:02   am  ", datetime(1976, 7, 4, 0, 1, 2), "extra space"),
+# ("Wed, July 10, '96", datetime(1996, 7, 10, 0, 0), "random format"),
+# ("1996.July.10 AD 12:08 PM", datetime(1996, 7, 10, 12, 8), "random format"),
+# ("7-4-76", datetime(1976, 7, 4), "random format"),
+# ("0:01:02 on July 4, 1976", datetime(1976, 7, 4, 0, 1, 2), "random format"),
+# ("July 4, 1976 12:01:02 am", datetime(1976, 7, 4, 0, 1, 2), "random format"),
+# ("Mon Jan  2 04:24:27 1995", datetime(1995, 1, 2, 4, 24, 27), "random format"),
+# ("04.04.95 00:22", datetime(1995, 4, 4, 0, 22), "random format"),
+# ("Jan 1 1999 11:23:34.578", datetime(1999, 1, 1, 11, 23, 34, 578000), "random format"),
 
 
 class Column(list):
@@ -1418,24 +1579,31 @@ def split_by_sequence(text, sequence):
     return chunks
 
 
-def text_reader(path, split_sequence=None, sep=",", end="\r\n"):
+def text_reader(path, split_sequence=None, sep=","):
     """ txt, tab & csv reader """
     if not isinstance(path, Path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
 
-    t = Table()
-    for line in path.open(newline=end):
-        line = line.rstrip(end)
-        if split_sequence:
-            values = split_by_sequence(line, split_sequence)
-        else:
-            values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
+    # detect newline format
+    windows = '\n'
+    unix = '\r\n'
 
-        if not t.columns:
-            for v in values:
-                t.add_column(v, datatype=str, allow_empty=True)
-        else:
-            t.add_row(values)
+    t = Table()
+    with path.open('r') as fi:
+        for line in fi:
+            end = windows if line.endswith(windows) else unix
+
+            line = line.rstrip(end)
+            if split_sequence:
+                values = split_by_sequence(line, split_sequence)
+            else:
+                values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
+
+            if not t.columns:
+                for v in values:
+                    t.add_column(v, datatype=str, allow_empty=True)
+            else:
+                t.add_row(values)
     return t
 
 
@@ -1454,7 +1622,7 @@ def zip_reader(path):
 def log_reader(path):
     if not isinstance(path, Path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
-    for line in path.open(newline="\r\n")[:10]:
+    for line in path.open()[:10]:
         print(repr(line))
     print("please declare separators. Blank return means 'done'.")
     split_sequence = []
@@ -1502,10 +1670,12 @@ def find_format(table):
                 break
 
 
-def file_reader(path):
+def file_reader(path, **kwargs):
     assert isinstance(path, Path)
     readers = {
         'csv': [text_reader, {'sep': ","}],
+        'ssv': [text_reader, {'sep': ";"}],
+        'tsv': [text_reader, {'sep': "\t"}],
         'txt': [text_reader, {'sep': "\t"}],
         'tab': [text_reader, {'sep': '\t'}],
         'xls': [],
@@ -1517,7 +1687,8 @@ def file_reader(path):
     }
 
     extension = path.name.split(".")[-1]
-    reader, kwargs = readers[extension]
+    reader, default_kwargs = readers[extension]
+    kwargs = {**default_kwargs, **kwargs}
 
     table = reader(path, **kwargs)
     find_format(table)
@@ -1616,6 +1787,7 @@ def test_04():
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 5856, len(table)
 
+
 test_04()
 
 
@@ -1636,4 +1808,27 @@ def test_05():
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 53, len(table)
 
+
 test_05()
+
+
+def test_06():
+    book1_csv = Table()
+    headers = '"Item";"Materiál";"Objem";"Jednotka objemu";"Free Inv Pcs"'
+    headers = headers.split(";")
+    for text_type in [headers[i] for i in (1, 3)]:
+        book1_csv.add_column(text_type, int, allow_empty=True)
+    for int_type in [headers[i] for i in (0,2)]:
+        book1_csv.add_column(int_type, int, allow_empty=True)
+    book1_csv.add_column(headers[4], float, allow_empty=True)
+
+    path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
+    assert path.exists()
+    table = file_reader(path, sep=';')
+    table.show(slice(0, 10))
+    table.show(slice(-15))
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 99, len(table)
+
+
+test_06()
