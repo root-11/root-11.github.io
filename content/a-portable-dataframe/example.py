@@ -9,9 +9,93 @@ from pathlib import Path
 
 class DataTypes(object):
     # reserved keyword for Nones:
+    digits = '1234567890'
     decimals = set('1234567890-+eE.')
     integers = set('1234567890-+')
     nones = {'null', 'Null', 'NULL', '#N/A', '#n/a', "", 'None', None}
+
+    date_formats = {
+        "NNNN-NN-NN": lambda x: date(*(int(i) for i in x.split("-"))),
+        "NNNN-N-NN": lambda x: date(*(int(i) for i in x.split("-"))),
+        "NNNN-NN-N": lambda x: date(*(int(i) for i in x.split("-"))),
+        "NNNN-N-N": lambda x: date(*(int(i) for i in x.split("-"))),
+        "NN-NN-NNNN": lambda x: date(*[int(i) for i in x.split("-")][::-1]),
+        "N-NN-NNNN": lambda x: date(*[int(i) for i in x.split("-")][::-1]),
+        "NN-N-NNNN": lambda x: date(*[int(i) for i in x.split("-")][::-1]),
+        "N-N-NNNN": lambda x: date(*[int(i) for i in x.split("-")][::-1]),
+        "NNNN.NN.NN": lambda x: date(*(int(i) for i in x.split("."))),
+        "NNNN.N.NN": lambda x: date(*(int(i) for i in x.split("."))),
+        "NNNN.NN.N": lambda x: date(*(int(i) for i in x.split("."))),
+        "NNNN.N.N": lambda x: date(*(int(i) for i in x.split("."))),
+        "NN.NN.NNNN": lambda x: date(*[int(i) for i in x.split(".")][::-1]),
+        "N.NN.NNNN": lambda x: date(*[int(i) for i in x.split(".")][::-1]),
+        "NN.N.NNNN": lambda x: date(*[int(i) for i in x.split(".")][::-1]),
+        "N.N.NNNN": lambda x: date(*[int(i) for i in x.split(".")][::-1]),
+        "NNNN/NN/NN": lambda x: date(*(int(i) for i in x.split("/"))),
+        "NNNN/N/NN": lambda x: date(*(int(i) for i in x.split("/"))),
+        "NNNN/NN/N": lambda x: date(*(int(i) for i in x.split("/"))),
+        "NNNN/N/N": lambda x: date(*(int(i) for i in x.split("/"))),
+        "NN/NN/NNNN": lambda x: date(*[int(i) for i in x.split("/")][::-1]),
+        "N/NN/NNNN": lambda x: date(*[int(i) for i in x.split("/")][::-1]),
+        "NN/N/NNNN": lambda x: date(*[int(i) for i in x.split("/")][::-1]),
+        "N/N/NNNN": lambda x: date(*[int(i) for i in x.split("/")][::-1]),
+        "NNNN NN NN": lambda x: date(*(int(i) for i in x.split(" "))),
+        "NNNN N NN": lambda x: date(*(int(i) for i in x.split(" "))),
+        "NNNN NN N": lambda x: date(*(int(i) for i in x.split(" "))),
+        "NNNN N N": lambda x: date(*(int(i) for i in x.split(" "))),
+        "NN NN NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
+        "N N NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
+        "NN N NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
+        "N NN NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
+        "NNNNNNNN": lambda x: date(*(int(x[:4]), int(x[4:6]), int(x[6:]))),
+
+        'NNNN-NN-NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x),
+        'NNNN-NN-NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, T=" "),
+        'NNNN/NN/NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/'),
+        'NNNN/NN/NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=" "),
+        'NNNN NN NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' '),
+        'NNNN NN NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' ', T=" "),
+
+        'NNNNNNNNTNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
+        'NNNNNNNNTNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
+        'NNNNNNNNTNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
+        'NNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
+        'NNNNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
+        'NNNNNNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
+
+        'NNNNNNNNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, compact=3),
+    }
+
+    @staticmethod
+    def pattern_to_datetime(iso_string, ymd=None, T=None, compact=0):
+        assert isinstance(iso_string, str)
+        if compact:
+            s = iso_string
+            if compact == 1:  # has T
+                slices = [(0, 4, "-"), (4, 6, "-"), (6, 8, "T"), (9, 11, ":"), (11, 13, ":"), (13, len(s), "")]
+            elif compact == 2:  # has no T.
+                slices = [(0, 4, "-"), (4, 6, "-"), (6, 8, "T"), (8, 10, ":"), (10, 12, ":"), (12, len(s), "")]
+            elif compact == 3:  # has T and :
+                slices = [(0, 4, "-"), (4, 6, "-"), (6, 8, "T"), (9, 11, ":"), (12, 14, ":"), (15, len(s), "")]
+            else:
+                raise TypeError
+            iso_string = "".join([s[a:b] + c for a, b, c in slices if b <= len(s)])
+            iso_string = iso_string.rstrip(":")
+
+        if "," in iso_string:
+            iso_string = iso_string.replace(",", ".")
+
+        dot = iso_string[::-1].find('.')
+        if 0 < dot < 10:
+            ix = len(iso_string) - dot
+            microsecond = int(float(f"0{iso_string[ix-1:]}") * 10 ** 6)
+            iso_string = iso_string[:len(iso_string) - dot ] + str(microsecond).rjust(6, "0")
+        if ymd:
+            iso_string = iso_string.replace(ymd, '-', 2)
+        if T:
+            iso_string = iso_string.replace(T, "T")
+        return datetime.fromisoformat(iso_string)
+
 
     int = int
     str = str
@@ -107,15 +191,10 @@ class DataTypes(object):
         elif isinstance(value, float):
             return int(value)
         elif isinstance(value, str):
+            value = value.replace('"', '')
             value_set = set(value)
-            if '"' in value_set:
-                value = value.replace('"', '')
-                value_set.remove('"')
-            if value_set - DataTypes.integers:
+            if value_set - DataTypes.integers:  # set comparison.
                 raise ValueError
-            # if value_set.intersection("Ee."):
-            #     raise ValueError("it's a float.")
-
             return int(float(value))
         else:
             raise ValueError
@@ -132,7 +211,7 @@ class DataTypes(object):
             if 0 < dot_index < comma_index:  # 1.234,567
                 value = value.replace('.', '')  # --> 1234,567
                 value = value.replace(',', '.') # --> 1234.567
-            elif dot_index > comma_index > 0: # 1,234.678
+            elif dot_index > comma_index > 0:  # 1,234.678
                 value = value.replace(',', '.')
             elif comma_index and dot_index == -1:
                 value = value.replace(',', '.')
@@ -195,7 +274,15 @@ class DataTypes(object):
         if isinstance(value, date):
             return value
         elif isinstance(value, str):
-            return date.fromisoformat(value)
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                pattern = "".join(["N" if n in DataTypes.digits else n for n in value])
+                f = DataTypes.date_formats.get(pattern, None)
+                if f:
+                    return f(value)
+                else:
+                    raise ValueError
         else:
             raise ValueError
 
@@ -204,7 +291,22 @@ class DataTypes(object):
         if isinstance(value, datetime):
             return value
         elif isinstance(value, str):
-            return datetime.fromisoformat(value)
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                if '.' in value:
+                    dot = value.find('.')
+                elif ',' in value:
+                    dot = value.find(',')
+                else:
+                    dot = len(value)
+
+                pattern = "".join(["N" if n in DataTypes.digits else n for n in value[:dot]])
+                f = DataTypes.date_formats.get(pattern, None)
+                if f:
+                    return f(value)
+                else:
+                    raise ValueError
         else:
             raise ValueError
 
@@ -227,6 +329,7 @@ class DataTypes(object):
     # Order is very important!
     types = [datetime, date, time, int, bool, float, str]
 
+
 # integers
 assert DataTypes.infer(1, int) == 1
 assert DataTypes.infer(0, int) == 0
@@ -239,9 +342,12 @@ assert DataTypes.infer('"1000028"', int) == 1000028
 # floats
 assert DataTypes.infer("2932,500", float) == 2932.5
 assert DataTypes.infer("2932.500", float) == 2932.5
+assert DataTypes.infer("-2932.500", float) == -2932.5
 assert DataTypes.infer("2.932,500", float) == 2932.5
 assert DataTypes.infer("2.932e5", float) == 2.932e5
+assert DataTypes.infer("-2.932e5", float) == -2.932e5
 assert DataTypes.infer("10e5", float) == 10e5
+assert DataTypes.infer("-10e5", float) == -10e5
 
 # booleans
 assert DataTypes.infer('true', bool) is True
@@ -255,37 +361,32 @@ assert DataTypes.infer('FALSE', bool) is False
 isodate = date(1990, 1, 1)
 assert DataTypes.infer(isodate.isoformat(), date) == isodate
 assert DataTypes.infer("1990-01-01", date) == date(1990, 1, 1)  # date with minus
-assert DataTypes.infer("2003-09-25",date) == date(2003, 9, 25)
+assert DataTypes.infer("2003-09-25", date) == date(2003, 9, 25)
 
-assert DataTypes.infer("09-25-2003", date) == date(2003, 9, 25)
-assert DataTypes.infer("25-09-2003", date) == date(2003, 9, 25)
-assert DataTypes.infer("10-09-2003", date) == date(2003, 10, 9)
+assert DataTypes.infer("25-09-2003", date) == date(2003, 9, 25)  # year last.
+assert DataTypes.infer("10-09-2003", date) == date(2003, 9, 10)
 
 assert DataTypes.infer("1990.01.01", date) == date(1990, 1, 1)  # date with dot.
 assert DataTypes.infer("2003.09.25", date) == date(2003, 9, 25)
-assert DataTypes.infer("09.25.2003", date) == date(2003, 9, 25)
 assert DataTypes.infer("25.09.2003", date) == date(2003, 9, 25)
-assert DataTypes.infer("10.09.2003", date) == date(2003, 10, 9)
+assert DataTypes.infer("10.09.2003", date) == date(2003, 9, 10)
 
 assert DataTypes.infer("1990/01/01", date) == date(1990, 1, 1)  # date with slash
 assert DataTypes.infer("2003/09/25", date) == date(2003, 9, 25)
-assert DataTypes.infer("09/25/2003", date) == date(2003, 9, 25)
 assert DataTypes.infer("25/09/2003", date) == date(2003, 9, 25)
-assert DataTypes.infer("10/09/2003", date) == date(2003, 10, 9)
+assert DataTypes.infer("10/09/2003", date) == date(2003, 9, 10)
 
 assert DataTypes.infer("1990 01 01", date) == date(1990, 1, 1)  # date with space
 assert DataTypes.infer("2003 09 25", date) == date(2003, 9, 25)
-assert DataTypes.infer("09 25 2003", date) == date(2003, 9, 25)
 assert DataTypes.infer("25 09 2003", date) == date(2003, 9, 25)
-assert DataTypes.infer("10 09 2003", date) == date(2003, 10, 9)
+assert DataTypes.infer("10 09 2003", date) == date(2003, 9, 10)
 
 assert DataTypes.infer("20030925", date) == date(2003, 9, 25)  # "iso stripped format strip"
 assert DataTypes.infer("19760704", date) == date(1976, 7, 4)  # "random format"),
 
-assert DataTypes.infer('13NOV2017', date) == date(2017, 11, 13) # GH360
-assert DataTypes.infer("7 4 1976", date) == date(1976, 7, 4)
-assert DataTypes.infer("14 jul 1976", date) == date(1976, 7, 14)
-assert DataTypes.infer("4 Jul 1976", date) == date(1976, 7, 4)
+assert DataTypes.infer("7 4 1976", date) == date(1976, 4, 7)
+# assert DataTypes.infer("14 jul 1976", date) == date(1976, 7, 14)
+# assert DataTypes.infer("4 Jul 1976", date) == date(1976, 7, 4)
 
 # NOT HANDLED - ambiguous formats.
 # ("10 09 03", date(2003, 10, 9), "date with space"),
@@ -296,6 +397,13 @@ assert DataTypes.infer("4 Jul 1976", date) == date(1976, 7, 4)
 # ("10.09.03", date(2003, 10, 9), "date with dot"),
 # ("10/09/03", date(2003, 10, 9), "date with slash"),
 
+# NOT HANDLED - MDY formats are deprecated since 1990. Just like Lb, Inch and Feet.
+# assert DataTypes.infer("09-25-2003", date) == date(2003, 9, 25)
+# assert DataTypes.infer("09.25.2003", date) == date(2003, 9, 25)
+# assert DataTypes.infer("09/25/2003", date) == date(2003, 9, 25)
+# assert DataTypes.infer("09 25 2003", date) == date(2003, 9, 25)
+# assert DataTypes.infer('13NOV2017', date) == date(2017, 11, 13) # GH360
+
 # times
 isotime = time(23, 12, 11)
 assert DataTypes.infer(isotime.isoformat(), time) == time(23, 12, 11)
@@ -304,19 +412,21 @@ assert DataTypes.infer("23:12:11.123456", time) == time(23, 12, 11, 123456)
 
 # datetimes
 isodatetime = datetime.now()
-assert DataTypes.infer(isodatetime.isoformat()) == isodatetime
-assert DataTypes.infer("1990-01-01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11)  # iso minus T no microsecond
-assert DataTypes.infer("1990-01-01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  #
-assert DataTypes.infer("1990/01/01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso slash T
-assert DataTypes.infer("1990 01 01T23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space T
-assert DataTypes.infer("1990-01-01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space
-assert DataTypes.infer("1990/01/01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso slash
-assert DataTypes.infer("1990 01 01 23:12:11.00300", datetime) == datetime(1990, 1, 1, 23, 12, 11, 0.003 * 10 ** 6)  # iso space
+assert DataTypes.infer(isodatetime.isoformat(), datetime) == isodatetime
+dirty_date = datetime(1990, 1, 1, 23, 12, 11, int(0.003 * 10 ** 6))
+assert DataTypes.infer("1990-01-01T23:12:11.003000", datetime) == dirty_date  # iso minus T microsecond
+assert DataTypes.infer("1990-01-01T23:12:11.003", datetime) == dirty_date  #
+assert DataTypes.infer("1990-01-01 23:12:11.003", datetime) == dirty_date  # iso space
+assert DataTypes.infer("1990/01/01T23:12:11.003", datetime) == dirty_date  # iso slash T
+assert DataTypes.infer("1990/01/01 23:12:11.003", datetime) == dirty_date  # iso slash
+assert DataTypes.infer("1990 01 01T23:12:11.003", datetime) == dirty_date  # iso space T
+assert DataTypes.infer("1990 01 01 23:12:11.003", datetime) == dirty_date  # iso space
 
 assert DataTypes.infer("2003-09-25T10:49:41", datetime) == datetime(2003, 9, 25, 10, 49, 41)  # iso minus T fields omitted.
 assert DataTypes.infer("2003-09-25T10:49", datetime) == datetime(2003, 9, 25, 10, 49)
 assert DataTypes.infer("2003-09-25T10", datetime) == datetime(2003, 9, 25, 10)
 
+assert DataTypes.infer("20080227T21:26:01.123456789", datetime) == datetime(2008, 2, 27, 21, 26, 1, 123456)  # high precision seconds
 assert DataTypes.infer("20030925T104941", datetime) == datetime(2003, 9, 25, 10, 49, 41)  # iso nospace T fields omitted.
 assert DataTypes.infer("20030925T1049", datetime) == datetime(2003, 9, 25, 10, 49, 0)
 assert DataTypes.infer("20030925T10", datetime) == datetime(2003, 9, 25, 10)
@@ -326,7 +436,6 @@ assert DataTypes.infer("19970902090807", datetime) == datetime(1997, 9, 2, 9, 8,
 assert DataTypes.infer("2003-09-25 10:49:41,502", datetime) == datetime(2003, 9, 25, 10, 49, 41, 502000)  # python logger format
 assert DataTypes.infer('0099-01-01T00:00:00', datetime) == datetime(99, 1, 1, 0, 0)  # 99 ad
 assert DataTypes.infer('0031-01-01T00:00:00', datetime) == datetime(31, 1, 1, 0, 0)  # 31 ad
-assert DataTypes.infer("20080227T21:26:01.123456789", datetime) == datetime(2008, 2, 27, 21, 26, 1, 123456)  # high precision seconds
 
 # NOT HANDLED. ambiguous format.
 # ("950404 122212", datetime(1995, 4, 4, 12, 22, 12), "random format"),
@@ -1725,7 +1834,7 @@ def test_01():
     for float_type in ["L", "W", "H", "weight", ]:
         amcap_test_data.add_column(float_type, float)
     for date_type in ["order_date", "ship_date"]:
-        amcap_test_data.add_column(date_type, str)
+        amcap_test_data.add_column(date_type, date)
     for boolean in ["liquid", "manual", "fragile"]:
         amcap_test_data.add_column(boolean, bool)
 
