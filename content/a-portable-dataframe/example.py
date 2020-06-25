@@ -8,13 +8,22 @@ from pathlib import Path
 
 
 class DataTypes(object):
+    # supported datatypes.
+    int = int
+    str = str
+    float = float
+    bool = bool
+    date = date
+    datetime = datetime
+    time = time
+
     # reserved keyword for Nones:
     digits = '1234567890'
     decimals = set('1234567890-+eE.')
     integers = set('1234567890-+')
     nones = {'null', 'Null', 'NULL', '#N/A', '#n/a', "", 'None', None}
 
-    date_formats = {
+    date_formats = {  # Note: Only recognised ISO8601 formats are accepted.
         "NNNN-NN-NN": lambda x: date(*(int(i) for i in x.split("-"))),
         "NNNN-N-NN": lambda x: date(*(int(i) for i in x.split("-"))),
         "NNNN-NN-N": lambda x: date(*(int(i) for i in x.split("-"))),
@@ -48,7 +57,9 @@ class DataTypes(object):
         "NN N NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
         "N NN NNNN": lambda x: date(*[int(i) for i in x.split(" ")][::-1]),
         "NNNNNNNN": lambda x: date(*(int(x[:4]), int(x[4:6]), int(x[6:]))),
+    }
 
+    datetime_formats = {  # Note: Only recognised ISO8601 formats are accepted.
         'NNNN-NN-NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x),
         'NNNN-NN-NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, T=" "),
         'NNNN/NN/NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/'),
@@ -95,15 +106,6 @@ class DataTypes(object):
         if T:
             iso_string = iso_string.replace(T, "T")
         return datetime.fromisoformat(iso_string)
-
-
-    int = int
-    str = str
-    float = float
-    bool = bool
-    date = date
-    datetime = datetime
-    time = time
 
     @staticmethod
     def to_json(v):
@@ -239,26 +241,17 @@ class DataTypes(object):
                 v_exponent = int(v[e+1:])
                 return float(f"{v_float_part}e{v_exponent}")
 
-                # if "." in v:
-                #     precision = e - v.index(".") - 1
-                # else:
-                #     precision = 0
-                # formatter = "{:." + str(precision) + "e}"
-                # reconstructed_input = formatter.format(float_value)
-                #
-                # e = reconstructed_input.find('e')
-                # r_float_part = float(reconstructed_input[:e])
-                # r_exponent = int(reconstructed_input[e+1:])
-                #
-                # if v_float_part == r_float_part and v_exponent == r_exponent:
-                #     return float_value
-
-            elif "." in str(float_value) and not "." in value_set:  # it's potentially an integer.
+            elif "." in str(float_value) and not "." in value_set:
+                # when traversing through Datatype.types,
+                # integer is presumed to have failed for the column,
+                # so we ignore this and turn it into a float...
                 reconstructed_input = str(int(float_value))
+
             elif "." in value:
                 precision = len(value) - value.index(".") - 1
                 formatter = '{0:.' + str(precision) + 'f}'
                 reconstructed_input = formatter.format(float_value)
+
             else:
                 reconstructed_input = str(float_value)
 
@@ -302,7 +295,7 @@ class DataTypes(object):
                     dot = len(value)
 
                 pattern = "".join(["N" if n in DataTypes.digits else n for n in value[:dot]])
-                f = DataTypes.date_formats.get(pattern, None)
+                f = DataTypes.datetime_formats.get(pattern, None)
                 if f:
                     return f(value)
                 else:
@@ -388,7 +381,7 @@ assert DataTypes.infer("7 4 1976", date) == date(1976, 4, 7)
 # assert DataTypes.infer("14 jul 1976", date) == date(1976, 7, 14)
 # assert DataTypes.infer("4 Jul 1976", date) == date(1976, 7, 4)
 
-# NOT HANDLED - ambiguous formats.
+# NOT HANDLED - ambiguous formats due to lack of 4 digits for year.
 # ("10 09 03", date(2003, 10, 9), "date with space"),
 # ("25 09 03", date(2003, 9, 25), "date with space"),
 # ("03 25 Sep", date(2003, 9, 25), "strangely ordered date"),
@@ -397,7 +390,7 @@ assert DataTypes.infer("7 4 1976", date) == date(1976, 4, 7)
 # ("10.09.03", date(2003, 10, 9), "date with dot"),
 # ("10/09/03", date(2003, 10, 9), "date with slash"),
 
-# NOT HANDLED - MDY formats are deprecated since 1990. Just like Lb, Inch and Feet.
+# NOT HANDLED - MDY formats are US locale.
 # assert DataTypes.infer("09-25-2003", date) == date(2003, 9, 25)
 # assert DataTypes.infer("09.25.2003", date) == date(2003, 9, 25)
 # assert DataTypes.infer("09/25/2003", date) == date(2003, 9, 25)
@@ -437,10 +430,11 @@ assert DataTypes.infer("2003-09-25 10:49:41,502", datetime) == datetime(2003, 9,
 assert DataTypes.infer('0099-01-01T00:00:00', datetime) == datetime(99, 1, 1, 0, 0)  # 99 ad
 assert DataTypes.infer('0031-01-01T00:00:00', datetime) == datetime(31, 1, 1, 0, 0)  # 31 ad
 
-# NOT HANDLED. ambiguous format.
+# NOT HANDLED. ambiguous format. Year is not 4 digits.
 # ("950404 122212", datetime(1995, 4, 4, 12, 22, 12), "random format"),
+# ("04.04.95 00:22", datetime(1995, 4, 4, 0, 22), "random format"),
 
-# NOT HANDLED. locale dependent.
+# NOT HANDLED. Month and Day names are locale dependent.
 # ("Thu Sep 25 10:36:28 2003", datetime(2003, 9, 25, 10, 36, 28), "date command format strip"),
 # ("Thu Sep 25 2003", datetime(2003, 9, 25), "date command format strip"),
 # ("  July   4 ,  1976   12:01:02   am  ", datetime(1976, 7, 4, 0, 1, 2), "extra space"),
@@ -450,7 +444,6 @@ assert DataTypes.infer('0031-01-01T00:00:00', datetime) == datetime(31, 1, 1, 0,
 # ("0:01:02 on July 4, 1976", datetime(1976, 7, 4, 0, 1, 2), "random format"),
 # ("July 4, 1976 12:01:02 am", datetime(1976, 7, 4, 0, 1, 2), "random format"),
 # ("Mon Jan  2 04:24:27 1995", datetime(1995, 1, 2, 4, 24, 27), "random format"),
-# ("04.04.95 00:22", datetime(1995, 4, 4, 0, 22), "random format"),
 # ("Jan 1 1999 11:23:34.578", datetime(1999, 1, 1, 11, 23, 34, 578000), "random format"),
 
 
@@ -526,7 +519,8 @@ class Column(list):
         assert isinstance(values, list)
         if len(values) != len(self):
             raise ValueError("input is not of same length as column.")
-        _ = [self.type_check(v) for v in values]
+        for v in values:
+            self.type_check(v)
         self.clear()
         self.extend(values)
 
@@ -554,7 +548,6 @@ assert c != Column('A', str, False)
 
 
 class Table(object):
-
     def __init__(self):
         self.columns = {}
         self.metadata = {}
@@ -1688,6 +1681,17 @@ def split_by_sequence(text, sequence):
     return chunks
 
 
+def detect_encoding(path):
+    assert isinstance(path, Path)
+    for encoding in ['ascii', 'utf-8', 'utf-16']:
+        try:
+            _ = path.open('r', encoding=encoding).read(100)
+            return encoding
+        except UnicodeDecodeError:
+            pass
+    raise UnicodeDecodeError
+
+
 def text_reader(path, split_sequence=None, sep=","):
     """ txt, tab & csv reader """
     if not isinstance(path, Path):
@@ -1697,8 +1701,11 @@ def text_reader(path, split_sequence=None, sep=","):
     windows = '\n'
     unix = '\r\n'
 
+    # detect encoding
+    encoding = detect_encoding(path)
+
     t = Table()
-    with path.open('r') as fi:
+    with path.open('r', encoding=encoding) as fi:
         for line in fi:
             end = windows if line.endswith(windows) else unix
 
@@ -1707,6 +1714,9 @@ def text_reader(path, split_sequence=None, sep=","):
                 values = split_by_sequence(line, split_sequence)
             else:
                 values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
+                if len(values) != len(t.columns):
+                    if line.count('"') > 2 or line.count("'") > 2:
+                        values = text_escape(line, sep=sep)
 
             if not t.columns:
                 for v in values:
@@ -1714,6 +1724,87 @@ def text_reader(path, split_sequence=None, sep=","):
             else:
                 t.add_row(values)
     return t
+
+
+def text_escape(s, escape='"', sep=';'):
+    """ escapes text marks using a depth measure. """
+    assert isinstance(s, str)
+
+    # in the following for loop, we calculate a stack-depth to determine
+    # whether we are entering an escaped sequence, or we are exiting.
+    # for example:
+    # s      = "this";"123";234;"this";123;"234"
+    # becomes:
+    # depths = 011110012221000001222210000012221
+    #
+    # when the value increments (from 0 to 1) for example, it means that
+    # we're entering an escaped sequence.
+    # when the value decrements (from 1 to 0), it means that we are exiting
+    # an escaped sequence.
+    #
+
+    escapes = {escape, sep}
+    depth = 0
+    depths = [0 for i in s]
+    stack = [None]
+    for ix, c in enumerate(s):
+        if c in escapes:
+            if c != stack[-1]:
+                depths[ix] = depth
+                depth += 1
+                stack.append(c)
+            else:
+                depth -= 1
+                stack.pop(-1)
+                depths[ix] = depth
+        else:
+            depths[ix] = depth
+
+    print(s)
+    print(''.join(str(i) for i in depths))
+
+    a, word, words = 0, [], tuple()
+
+    for c, b in zip(s, depths):
+        if a <= b and c not in escapes:
+            word.append(c)
+        elif word:
+            if a > b or c in escapes:
+                words += ("".join(word), )
+                word.clear()
+        else:
+            pass
+        a = b
+    if word:
+        words += ("".join(word), )
+
+    return words
+
+
+te = text_escape('"t"')
+assert te == ("t", )
+
+te = text_escape('"t";"3";"2"')
+assert te == ("t","3","2")
+
+te = text_escape('"this";"123";234;"this";123;"234"')
+assert te == ('this', '123', '234', 'this', '123', '234')
+
+te = text_escape('"this";"123";"234"')
+assert te == ("this", "123", "234")
+
+te = text_escape('"this";123;234')
+assert te == ("this", "123", "234")
+
+te = text_escape('"this";123;"234"')
+assert te == ("this", "123", "234")
+
+te = text_escape('123;"1\'3";234')
+assert te == ("123", "1'3", "234"), te
+
+te = text_escape('"1000627";"MOC;Sportpouzdro;pás;krk;XL;černá";"2.080,000";"CM3";2')
+assert te == ("1000627", "MOC;Sportpouzdro;pás;krk;XL;černá", "2.080,000", "CM3", '2')
+
 
 
 def excel_reader(path):
@@ -1904,7 +1995,7 @@ def test_05():
     book1_csv = Table()
     headers = "Date,OrderId,Customer,SKU,Qty"
     headers = headers.split(",")
-    book1_csv.add_column(headers[0], str, allow_empty=True)
+    book1_csv.add_column(headers[0], date, allow_empty=True)
     for float_type in headers[1:4]:
         book1_csv.add_column(float_type.rstrip().lstrip(), int, allow_empty=True)
     book1_csv.add_column(headers[-1], float, allow_empty=True)
@@ -1926,9 +2017,11 @@ def test_06():
     headers = '"Item";"Materiál";"Objem";"Jednotka objemu";"Free Inv Pcs"'
     headers = headers.split(";")
     for text_type in [headers[i] for i in (1, 3)]:
-        book1_csv.add_column(text_type, int, allow_empty=True)
+        book1_csv.add_column(text_type, str, allow_empty=True)
+
     for int_type in [headers[i] for i in (0,2)]:
         book1_csv.add_column(int_type, int, allow_empty=True)
+
     book1_csv.add_column(headers[4], float, allow_empty=True)
 
     path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
