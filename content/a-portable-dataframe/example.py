@@ -1683,7 +1683,7 @@ def split_by_sequence(text, sequence):
 
 def detect_encoding(path):
     assert isinstance(path, Path)
-    for encoding in ['ascii', 'utf-8', 'utf-16']:
+    for encoding in ['ascii', 'utf-8', 'utf-16', 'windows-1252']:
         try:
             _ = path.open('r', encoding=encoding).read(100)
             return encoding
@@ -2007,3 +2007,23 @@ def test_06():
 
 
 test_06()
+
+
+def test_07():
+    book1_csv = Table()
+    book1_csv.add_column('Item', int)
+    book1_csv.add_column('Materiál', str)
+    book1_csv.add_column('Objem', float)
+    book1_csv.add_column('Jednotka objemu', str)
+    book1_csv.add_column('Free Inv Pcs', int)
+
+    path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
+    assert path.exists()
+    table = file_reader(path, sep=';')
+    table.show(slice(0, 10))
+    table.show(slice(-15))
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 99, len(table)
+
+
+test_07()
