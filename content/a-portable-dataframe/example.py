@@ -1,6 +1,6 @@
 import zlib
 import json
-from time import time_ns
+from time import process_time_ns
 from itertools import count
 from datetime import datetime, date, time
 from functools import lru_cache
@@ -1888,6 +1888,9 @@ def find_format(table):
                     except (ValueError, TypeError):
                         pass
                 works.append((c, dtype))
+                if c == len(values):
+                    break  # we have a complete match for the simplest
+                    # dataformat for all values. No need to do more work.
 
         for c, dtype in works:
             if c == len(values):
@@ -2098,9 +2101,9 @@ def test_08():
 
     path = Path(__file__).parent / "files" / 'frito.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
     assert table.compare(table_source)
     assert len(table) == 9999, len(table)
@@ -2129,9 +2132,9 @@ def test_09():
 
     path = Path(__file__).parent / "files" / 'large_skus.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
     assert table.compare(large_skus)
@@ -2151,9 +2154,9 @@ def test_10():
 
     path = Path(__file__).parent / "files" / 'messy_orderlines.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
 
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
@@ -2174,9 +2177,9 @@ def test_11():
 
     path = Path(__file__).parent / "files" / 'messy_skus.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
 
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
@@ -2197,9 +2200,9 @@ def test12():
 
     path = Path(__file__).parent / "files" / 'orderline_data_to_forecast.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
 
     print("{:,} fields/seccond".format(round((len(table) * len(table.columns)) / ((end - start) / 10e9), 0)))
@@ -2219,9 +2222,9 @@ def test_13():
 
     path = Path(__file__).parent / "files" / 'orderlines.csv'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
 
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
@@ -2256,9 +2259,9 @@ def test_14():
 
     path = Path(__file__).parent / "files" / 'sap_sample.txt'
     assert path.exists()
-    start = time_ns()
+    start = process_time_ns()
     table = file_reader(path, split_sequence=split_sequence)
-    end = time_ns()
+    end = process_time_ns()
     table.show(slice(5))
 
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / (max(1, end - start) / 10e9),0)) )
