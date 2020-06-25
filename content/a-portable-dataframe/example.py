@@ -1712,11 +1712,10 @@ def text_reader(path, split_sequence=None, sep=","):
             line = line.rstrip(end)
             if split_sequence:
                 values = split_by_sequence(line, split_sequence)
+            elif line.count('"') > 2 or line.count("'") > 2:
+                values = text_escape(line, sep=sep)
             else:
                 values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
-                if len(values) != len(t.columns):
-                    if line.count('"') > 2 or line.count("'") > 2:
-                        values = text_escape(line, sep=sep)
 
             if not t.columns:
                 for v in values:
@@ -1729,55 +1728,31 @@ def text_reader(path, split_sequence=None, sep=","):
 def text_escape(s, escape='"', sep=';'):
     """ escapes text marks using a depth measure. """
     assert isinstance(s, str)
-
-    # in the following for loop, we calculate a stack-depth to determine
-    # whether we are entering an escaped sequence, or we are exiting.
-    # for example:
-    # s      = "this";"123";234;"this";123;"234"
-    # becomes:
-    # depths = 011110012221000001222210000012221
-    #
-    # when the value increments (from 0 to 1) for example, it means that
-    # we're entering an escaped sequence.
-    # when the value decrements (from 1 to 0), it means that we are exiting
-    # an escaped sequence.
-    #
-
-    escapes = {escape, sep}
-    depth = 0
-    depths = [0 for i in s]
-    stack = [None]
+    word, words = [], tuple()
+    in_esc_seq = False
     for ix, c in enumerate(s):
-        if c in escapes:
-            if c != stack[-1]:
-                depths[ix] = depth
-                depth += 1
-                stack.append(c)
+        if c == escape:
+            if in_esc_seq:
+                if ix+1 != len(s) and s[ix + 1] != sep:
+                    word.append(c)
+                    continue  # it's a fake escape.
+                in_esc_seq = False
             else:
-                depth -= 1
-                stack.pop(-1)
-                depths[ix] = depth
-        else:
-            depths[ix] = depth
-
-    print(s)
-    print(''.join(str(i) for i in depths))
-
-    a, word, words = 0, [], tuple()
-
-    for c, b in zip(s, depths):
-        if a <= b and c not in escapes:
-            word.append(c)
-        elif word:
-            if a > b or c in escapes:
-                words += ("".join(word), )
+                in_esc_seq = True
+            if word:
+                words += ("".join(word),)
+                word.clear()
+        elif c == sep and not in_esc_seq:
+            if word:
+                words += ("".join(word),)
                 word.clear()
         else:
-            pass
-        a = b
-    if word:
-        words += ("".join(word), )
+            word.append(c)
 
+    if word:
+        if word:
+            words += ("".join(word),)
+            word.clear()
     return words
 
 
@@ -1805,6 +1780,8 @@ assert te == ("123", "1'3", "234"), te
 te = text_escape('"1000627";"MOC;Sportpouzdro;pás;krk;XL;černá";"2.080,000";"CM3";2')
 assert te == ("1000627", "MOC;Sportpouzdro;pás;krk;XL;černá", "2.080,000", "CM3", '2')
 
+te = text_escape('"1000294";"S2417DG 24"" LED monitor (210-AJWM)";"47.120,000";"CM3";3')
+assert te == ('1000294', 'S2417DG 24"" LED monitor (210-AJWM)', '47.120,000', 'CM3', '3')
 
 
 def excel_reader(path):
@@ -2014,15 +1991,11 @@ test_05()
 
 def test_06():
     book1_csv = Table()
-    headers = '"Item";"Materiál";"Objem";"Jednotka objemu";"Free Inv Pcs"'
-    headers = headers.split(";")
-    for text_type in [headers[i] for i in (1, 3)]:
-        book1_csv.add_column(text_type, str, allow_empty=True)
-
-    for int_type in [headers[i] for i in (0,2)]:
-        book1_csv.add_column(int_type, int, allow_empty=True)
-
-    book1_csv.add_column(headers[4], float, allow_empty=True)
+    book1_csv.add_column('Item', int)
+    book1_csv.add_column('Materiál', str)
+    book1_csv.add_column('Objem', float)
+    book1_csv.add_column('Jednotka objemu', str)
+    book1_csv.add_column('Free Inv Pcs', int)
 
     path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
     assert path.exists()
