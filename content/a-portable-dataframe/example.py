@@ -1706,6 +1706,7 @@ def text_reader(path, split_sequence=None, sep=","):
     encoding = detect_encoding(path)
 
     t = Table()
+    n_columns = None
     with path.open('r', encoding=encoding) as fi:
         for line in fi:
             end = windows if line.endswith(windows) else unix
@@ -1713,15 +1714,22 @@ def text_reader(path, split_sequence=None, sep=","):
             line = line.rstrip(end)
             if split_sequence:
                 values = split_by_sequence(line, split_sequence)
-            elif line.count('"') > 2 or line.count("'") > 2:
+            elif line.count('"') >= 2 or line.count("'") >= 2:
                 values = text_escape(line, sep=sep)
             else:
                 values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
 
+            # if values[-1] == '':
+            #     if n_columns and len(values) == n_columns + 1:
+            #         values = values[:-1]
+
             if not t.columns:
                 for v in values:
                     t.add_column(v, datatype=str, allow_empty=True)
+                n_columns = len(values)
             else:
+                if n_columns - 1 == len(values):
+                    values += ('', )
                 t.add_row(values)
     return t
 
@@ -2031,22 +2039,22 @@ test_07()
 
 
 def test_08():
-    frito = Table()
-    frito.add_column('prod_slbl', int)
-    frito.add_column('sale_date', datetime)
-    frito.add_column('cust_nbr', int)
-    frito.add_column('Prod Tkt Descp Txt', str)
-    frito.add_column('Case Qty', int)
-    frito.add_column('EA Location', str)
-    frito.add_column('CDY/Cs', int)
-    frito.add_column('EA/Cs', int)
-    frito.add_column('EA/CDY', int)
-    frito.add_column('Ordered As', str)
-    frito.add_column('Picked As', str)
-    frito.add_column('Cs/Pal', int)
-    frito.add_column('SKU', int)
-    frito.add_column('Order_Number', str)
-    frito.add_column('cases', int)
+    table_source = Table()
+    table_source.add_column('prod_slbl', int)
+    table_source.add_column('sale_date', datetime)
+    table_source.add_column('cust_nbr', int)
+    table_source.add_column('Prod Tkt Descp Txt', str)
+    table_source.add_column('Case Qty', int)
+    table_source.add_column('EA Location', str)
+    table_source.add_column('CDY/Cs', int)
+    table_source.add_column('EA/Cs', int)
+    table_source.add_column('EA/CDY', int)
+    table_source.add_column('Ordered As', str)
+    table_source.add_column('Picked As', str)
+    table_source.add_column('Cs/Pal', int)
+    table_source.add_column('SKU', int)
+    table_source.add_column('Order_Number', str)
+    table_source.add_column('cases', int)
 
     path = Path(__file__).parent / "files" / 'frito.csv'
     assert path.exists()
@@ -2054,8 +2062,43 @@ def test_08():
     table = file_reader(path)
     end = time_ns()
     print(len(table), "rows took", (end-start) / 10e9, 'sec')
-    assert table.compare(frito)
+    assert table.compare(table_source)
     assert len(table) == 9999, len(table)
 
 
 test_08()
+
+def test_09():
+    large_skus = Table()
+    large_skus.add_column('LadeGrp', int, False)
+    large_skus.add_column('Einkaufsgruppe (Purchase Group)', int, False)
+    large_skus.add_column('Artikelnummer (SKU ID)', int, False)
+    large_skus.add_column('Artikeltext (SKU description)', str, False)
+    large_skus.add_column('Breite cm (width)', str, True)
+    large_skus.add_column('L�nge cm (length)', str, True)
+    large_skus.add_column('H�he cm (height)', str, True)
+    large_skus.add_column('Volumen cm� (cube)', str, True)
+    large_skus.add_column('Bruttogewicht kg (weight)', str, True)
+    large_skus.add_column('DMk', str, True)
+    large_skus.add_column('Aktuelle Pick-Strategie (currently picked strategie)in Berbersdorf ', str, True)
+    large_skus.add_column('Kolli Inhalt (case quantity)', float, True)
+    large_skus.add_column('Lagen Inhalt (cases per layer)', float, True)
+    large_skus.add_column('Paletten Inhalt (pallet quantity)', float, True)
+    large_skus.add_column('Umkarton Inhalt (pieces per outer package)', str, True)
+    large_skus.add_column('Display-paletten (display pallet)', str, True)
+
+    path = Path(__file__).parent / "files" / 'large_skus.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    table.show(slice(5))
+    print(len(table)*len(table.columns), "fields rows took", (end - start) / 10e9, 'sec')
+    assert table.compare(large_skus)
+    assert len(table) == 45745, len(table)
+
+
+test_09()
+
+
+
