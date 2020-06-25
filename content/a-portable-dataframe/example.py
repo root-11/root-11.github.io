@@ -1,5 +1,6 @@
 import zlib
 import json
+from time import time_ns
 from itertools import count
 from datetime import datetime, date, time
 from functools import lru_cache
@@ -1687,7 +1688,7 @@ def detect_encoding(path):
         try:
             _ = path.open('r', encoding=encoding).read(100)
             return encoding
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, UnicodeError):
             pass
     raise UnicodeDecodeError
 
@@ -2017,7 +2018,7 @@ def test_07():
     book1_csv.add_column('Jednotka objemu', str)
     book1_csv.add_column('Free Inv Pcs', int)
 
-    path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
+    path = Path(__file__).parent / "files" / 'encoding_windows1250_test.csv'
     assert path.exists()
     table = file_reader(path, sep=';')
     table.show(slice(0, 10))
@@ -2027,3 +2028,34 @@ def test_07():
 
 
 test_07()
+
+
+def test_08():
+    frito = Table()
+    frito.add_column('prod_slbl', int)
+    frito.add_column('sale_date', datetime)
+    frito.add_column('cust_nbr', int)
+    frito.add_column('Prod Tkt Descp Txt', str)
+    frito.add_column('Case Qty', int)
+    frito.add_column('EA Location', str)
+    frito.add_column('CDY/Cs', int)
+    frito.add_column('EA/Cs', int)
+    frito.add_column('EA/CDY', int)
+    frito.add_column('Ordered As', str)
+    frito.add_column('Picked As', str)
+    frito.add_column('Cs/Pal', int)
+    frito.add_column('SKU', int)
+    frito.add_column('Order_Number', str)
+    frito.add_column('cases', int)
+
+    path = Path(__file__).parent / "files" / 'frito.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    print(len(table), "rows took", (end-start) / 10e9, 'sec')
+    assert table.compare(frito)
+    assert len(table) == 9999, len(table)
+
+
+test_08()
