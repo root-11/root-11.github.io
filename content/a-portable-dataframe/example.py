@@ -2061,7 +2061,7 @@ def test_08():
     start = time_ns()
     table = file_reader(path)
     end = time_ns()
-    print(len(table), "rows took", (end-start) / 10e9, 'sec')
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
     assert table.compare(table_source)
     assert len(table) == 9999, len(table)
 
@@ -2093,7 +2093,7 @@ def test_09():
     table = file_reader(path)
     end = time_ns()
     table.show(slice(5))
-    print(len(table)*len(table.columns), "fields rows took", (end - start) / 10e9, 'sec')
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
     assert table.compare(large_skus)
     assert len(table) == 45745, len(table)
 
@@ -2101,4 +2101,48 @@ def test_09():
 test_09()
 
 
+def test_10():
+    messy_orderlines = Table()
+    messy_orderlines.add_column('Date', date, False)
+    messy_orderlines.add_column('OrderId', int, False)
+    messy_orderlines.add_column('Customer', int, False)
+    messy_orderlines.add_column('SKU', int, False)
+    messy_orderlines.add_column('Qty', float, False)
+
+    path = Path(__file__).parent / "files" / 'messy_orderlines.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    table.show(slice(5))
+
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    assert table.compare(messy_orderlines)
+    assert len(table) == 1997, len(table)
+
+
+test_10()
+
+
+
+def test_11():
+    messy_skus = Table()
+    messy_skus.add_column('SKU', int, False)
+    messy_skus.add_column('Length', int, False)
+    messy_skus.add_column('Width', int, False)
+    messy_skus.add_column('Height', int, False)
+
+    path = Path(__file__).parent / "files" / 'messy_skus.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    table.show(slice(5))
+
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    assert table.compare(messy_skus)
+    assert len(table) == 1358, len(table)
+
+
+test_11()
 
