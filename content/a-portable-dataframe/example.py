@@ -2204,3 +2204,26 @@ def test12():
 test12()
 
 
+def test_13():
+    messy_orderlines = Table()
+    messy_orderlines.add_column('Date', date, False)
+    messy_orderlines.add_column('OrderId', int, False)
+    messy_orderlines.add_column('Customer', int, False)
+    messy_orderlines.add_column('SKU', int, False)
+    messy_orderlines.add_column('Qty', int, False)
+
+    path = Path(__file__).parent / "files" / 'orderlines.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    table.show(slice(5))
+
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    assert table.compare(messy_orderlines)
+    assert len(table) == 1997, len(table)
+
+
+test_13()
+
+
