@@ -61,25 +61,59 @@ class DataTypes(object):
     }
 
     datetime_formats = {  # Note: Only recognised ISO8601 formats are accepted.
-        'NNNN-NN-NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x),
-        'NNNN-NN-NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, T=" "),
-        'NNNN/NN/NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/'),
-        'NNNN/NN/NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=" "),
-        'NNNN NN NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' '),
-        'NNNN NN NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' ', T=" "),
 
+        # year first
+        'NNNN-NN-NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x), # -T
+        'NNNN-NN-NNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x),
+
+        'NNNN-NN-NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, T=" "),  # - space
+        'NNNN-NN-NN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, T=" "),
+
+        'NNNN/NN/NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/'),  # / T
+        'NNNN/NN/NNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/'),
+
+        'NNNN/NN/NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=" "),  # / space
+        'NNNN/NN/NN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=" "),
+
+        'NNNN NN NNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' '),  # space T
+        'NNNN NN NNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' '),
+
+        'NNNN NN NN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' ', T=" "),  # space
+        'NNNN NN NN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd=' ', T=" "),
+
+        # day first
+        'NN-NN-NNNNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='-', T=' ', day_first=True),  # - T
+        'NN-NN-NNNNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='-', T=' ', day_first=True),
+
+        'NN-NN-NNNN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='-', T=' ', day_first=True),  # - space
+        'NN-NN-NNNN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='-', T=' ', day_first=True),
+
+        'NN/NN/NNNNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),  # / T
+        'NN/NN/NNNNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),
+
+        'NN/NN/NNNN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=' ', day_first=True),  # / space
+        'NN/NN/NNNN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', T=' ', day_first=True),
+
+        'NN NN NNNNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),  # space T
+        'NN NN NNNNTNN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),
+
+        'NN NN NNNN NN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),  # space
+        'NN NN NNNN NN:NN': lambda x: DataTypes.pattern_to_datetime(x, ymd='/', day_first=True),
+
+        # compact formats - type 1
         'NNNNNNNNTNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
         'NNNNNNNNTNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
         'NNNNNNNNTNN': lambda x: DataTypes.pattern_to_datetime(x, compact=1),
+        # compact formats - type 2
         'NNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
         'NNNNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
         'NNNNNNNNNNNNNN': lambda x: DataTypes.pattern_to_datetime(x, compact=2),
-
+        # compact formats - type 3
         'NNNNNNNNTNN:NN:NN': lambda x: DataTypes.pattern_to_datetime(x, compact=3),
     }
 
     @staticmethod
-    def pattern_to_datetime(iso_string, ymd=None, T=None, compact=0):
+    def pattern_to_datetime(iso_string, ymd=None, T=None, compact=0, day_first=False):
         assert isinstance(iso_string, str)
         if compact:
             s = iso_string
@@ -93,6 +127,10 @@ class DataTypes(object):
                 raise TypeError
             iso_string = "".join([s[a:b] + c for a, b, c in slices if b <= len(s)])
             iso_string = iso_string.rstrip(":")
+
+        if day_first:
+            s = iso_string
+            iso_string = "".join((s[6:10],"-", s[3:5], "-", s[0:2], s[10:]))
 
         if "," in iso_string:
             iso_string = iso_string.replace(",", ".")
@@ -412,6 +450,7 @@ assert DataTypes.infer("1990-01-01T23:12:11.003000", datetime) == dirty_date  # 
 assert DataTypes.infer("1990-01-01T23:12:11.003", datetime) == dirty_date  #
 assert DataTypes.infer("1990-01-01 23:12:11.003", datetime) == dirty_date  # iso space
 assert DataTypes.infer("1990/01/01T23:12:11.003", datetime) == dirty_date  # iso slash T
+assert DataTypes.infer("10/04/2007 00:00", datetime) == datetime(2007,4,10,0,0)
 assert DataTypes.infer("1990/01/01 23:12:11.003", datetime) == dirty_date  # iso slash
 assert DataTypes.infer("1990 01 01T23:12:11.003", datetime) == dirty_date  # iso space T
 assert DataTypes.infer("1990 01 01 23:12:11.003", datetime) == dirty_date  # iso space
@@ -1719,10 +1758,6 @@ def text_reader(path, split_sequence=None, sep=","):
             else:
                 values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
 
-            # if values[-1] == '':
-            #     if n_columns and len(values) == n_columns + 1:
-            #         values = values[:-1]
-
             if not t.columns:
                 for v in values:
                     t.add_column(v, datatype=str, allow_empty=True)
@@ -2127,10 +2162,10 @@ test_10()
 
 def test_11():
     messy_skus = Table()
-    messy_skus.add_column('SKU', int, False)
-    messy_skus.add_column('Length', int, False)
-    messy_skus.add_column('Width', int, False)
-    messy_skus.add_column('Height', int, False)
+    messy_skus.add_column('SKU', int, True)
+    messy_skus.add_column('Length', str, True)  # there's a minus in one field.
+    messy_skus.add_column('Width', str, True)
+    messy_skus.add_column('Height', str, True)
 
     path = Path(__file__).parent / "files" / 'messy_skus.csv'
     assert path.exists()
@@ -2145,4 +2180,27 @@ def test_11():
 
 
 test_11()
+
+
+def test12():
+    old = Table()  # date,orderid,customerid,sku,quantity
+    old.add_column('date', datetime, False)
+    old.add_column('orderid', int, False)
+    old.add_column('customerid', int, False)
+    old.add_column('sku', int, False)
+    old.add_column('quantity', int, False)
+
+    path = Path(__file__).parent / "files" / 'orderline_data_to_forecast.csv'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path)
+    end = time_ns()
+    table.show(slice(5))
+
+    print("{:,} fields/seccond".format(round((len(table) * len(table.columns)) / ((end - start) / 10e9), 0)))
+    assert table.compare(old)
+    assert len(table) == 11324, len(table)
+
+test12()
+
 
