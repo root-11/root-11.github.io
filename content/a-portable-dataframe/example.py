@@ -232,7 +232,7 @@ class DataTypes(object):
         elif isinstance(value, float):
             return int(value)
         elif isinstance(value, str):
-            value = value.replace('"', '')
+            value = value.replace('"', '').replace(" ", "")
             value_set = set(value)
             if value_set - DataTypes.integers:  # set comparison.
                 raise ValueError
@@ -689,6 +689,8 @@ class Table(object):
 
     def check_for_duplicate_header(self, header):
         assert isinstance(header, str)
+        if not header:
+            header = 'None'
         new_header = header
         counter = count(start=1)
         while hasattr(self, new_header):
@@ -1760,7 +1762,8 @@ def text_reader(path, split_sequence=None, sep=","):
 
             if not t.columns:
                 for v in values:
-                    t.add_column(v, datatype=str, allow_empty=True)
+                    header = v.rstrip(" ").lstrip(" ")
+                    t.add_column(header, datatype=str, allow_empty=True)
                 n_columns = len(values)
             else:
                 if n_columns - 1 == len(values):
@@ -1801,10 +1804,10 @@ def text_escape(s, escape='"', sep=';'):
 
 
 te = text_escape('"t"')
-assert te == ("t", )
+assert te == ("t",)
 
 te = text_escape('"t";"3";"2"')
-assert te == ("t","3","2")
+assert te == ("t", "3", "2")
 
 te = text_escape('"this";"123";234;"this";123;"234"')
 assert te == ('this', '123', '234', 'this', '123', '234')
@@ -1873,16 +1876,18 @@ def find_format(table):
             column.allow_empty = False
 
         works = []
-        for dtype in DataTypes.types:  # try all datatypes.
-
-            c = 0
-            for v in values:
-                try:
-                    DataTypes.infer(v, dtype)
-                    c += 1
-                except (ValueError, TypeError):
-                    pass
-            works.append((c, dtype))
+        if not values:
+            works.append((0, DataTypes.str))
+        else:
+            for dtype in DataTypes.types:  # try all datatypes.
+                c = 0
+                for v in values:
+                    try:
+                        DataTypes.infer(v, dtype)
+                        c += 1
+                    except (ValueError, TypeError):
+                        pass
+                works.append((c, dtype))
 
         for c, dtype in works:
             if c == len(values):
@@ -2115,7 +2120,7 @@ def test_09():
     large_skus.add_column('Volumen cm� (cube)', str, True)
     large_skus.add_column('Bruttogewicht kg (weight)', str, True)
     large_skus.add_column('DMk', str, True)
-    large_skus.add_column('Aktuelle Pick-Strategie (currently picked strategie)in Berbersdorf ', str, True)
+    large_skus.add_column('Aktuelle Pick-Strategie (currently picked strategie)in Berbersdorf', str, True)
     large_skus.add_column('Kolli Inhalt (case quantity)', float, True)
     large_skus.add_column('Lagen Inhalt (cases per layer)', float, True)
     large_skus.add_column('Paletten Inhalt (pallet quantity)', float, True)
@@ -2225,5 +2230,41 @@ def test_13():
 
 
 test_13()
+
+
+def test_14():
+    header = "    | Delivery |  Item|Pl.GI date|Route |SC|Ship-to   |SOrg.|Delivery quantity|SU| TO Number|Material    |Dest.act.qty.|BUn|Typ|Source Bin|Cty"
+    split_sequence = ["|"] * header.count('|')
+    sap_sample = Table()
+    sap_sample.add_column('None', str, True)
+    sap_sample.add_column('Delivery', int, False)
+    sap_sample.add_column('Item', int, False)
+    sap_sample.add_column('Pl.GI date', date, False)
+    sap_sample.add_column('Route', str, False)
+    sap_sample.add_column('SC', str, False)
+    sap_sample.add_column('Ship-to', str, False)
+    sap_sample.add_column('SOrg.', str, False)
+    sap_sample.add_column('Delivery quantity', int, False)
+    sap_sample.add_column('SU', str, False)
+    sap_sample.add_column('TO Number', int, False)
+    sap_sample.add_column('Material', str, False)
+    sap_sample.add_column('Dest.act.qty.', int, False)
+    sap_sample.add_column('BUn', str, False)
+    sap_sample.add_column('Typ', str, False)
+    sap_sample.add_column('Source Bin', str, False)
+    sap_sample.add_column('Cty|', str, False)
+
+    path = Path(__file__).parent / "files" / 'sap_sample.txt'
+    assert path.exists()
+    start = time_ns()
+    table = file_reader(path, split_sequence=split_sequence)
+    end = time_ns()
+    table.show(slice(5))
+
+    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / (max(1, end - start) / 10e9),0)) )
+    assert table.compare(sap_sample)
+    assert len(table) == 20, len(table)
+
+test_14()
 
 
