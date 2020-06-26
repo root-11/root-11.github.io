@@ -1,6 +1,7 @@
 import zlib
 import json
-from time import process_time_ns
+import xlrd
+from time import process_time, process_time_ns
 from itertools import count
 from datetime import datetime, date, time
 from functools import lru_cache
@@ -215,6 +216,8 @@ class DataTypes(object):
     def _infer_bool(value):
         if isinstance(value, int):
             raise ValueError("it's an integer.")
+        if isinstance(value, float):
+            raise ValueError("it's a float.")
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -223,14 +226,17 @@ class DataTypes(object):
             elif value in "FalsefalseFALSE":
                 return False
             else:
-                raise ValueError
+                pass
+        raise ValueError
 
     @staticmethod
     def _infer_int(value):
         if isinstance(value, int):
             return value
         elif isinstance(value, float):
-            return int(value)
+            if int(value) == value:
+                return int(value)
+            raise ValueError("it's a float")
         elif isinstance(value, str):
             value = value.replace('"', '').replace(" ", "")
             value_set = set(value)
@@ -1923,7 +1929,56 @@ def text_escape_tests():
 def excel_reader(path):
     if not isinstance(path, Path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
-    raise NotImplementedError
+    sheets = xlrd.open_workbook(str(path), logfile='', on_demand=True)
+    assert isinstance(sheets, xlrd.Book)
+
+    tables = []
+    for sheet in sheets.sheets():
+        if sheet.nrows == sheet.ncols == 0:
+            continue
+        else:
+            table = excel_sheet_reader(sheet)
+            tables.append(table)
+    return tables
+
+
+def excel_datetime(value):
+    Y, M, D, h, m, s = xlrd.xldate_as_tuple(value, 0)
+    if all((Y, M, D, h, m, s)):
+        return f"{Y}-{M}-{D}T{h}-{m}-{s}"
+    if all((Y, M, D)):
+        return f"{Y}-{M}-{D}"
+    if all((h, m, s)):
+        return f"{h}:{m}:{s}"
+    return value  # .. we tried...
+
+
+def excel_sheet_reader(sheet):
+    assert isinstance(sheet, xlrd.sheet.Sheet)
+
+    excel_datatypes = {0: lambda x: None,  # empty string
+                       1: lambda x: str(x),  # unicode string
+                       2: lambda x: x,  # numeric int or float
+                       3: lambda x: excel_datetime(x),  # datetime float
+                       4: lambda x: bool(x),  # boolean
+                       5: lambda x: str(x)}  # error code
+
+    t = Table()
+    for column_index in range(sheet.ncols):
+        data = sheet.col_values(column_index)
+
+        dtypes = {type(v) for v in data[1:]}
+        allow_empty = True if None in dtypes else False
+        dtypes.discard(None)
+
+        if len(dtypes) == 1:
+            header, dtype, data = str(data[0]), dtypes.pop(), data[1:]
+        else:
+            header, dtype, data = str(data[0]), str, [str(v) for v in data[1:]]
+
+        t.add_column(header, dtype, allow_empty, data)
+
+    return t
 
 
 def zip_reader(path):
@@ -1972,10 +2027,10 @@ def find_format(table):
                 c = 0
                 for v in values:
                     try:
-                        DataTypes.infer(v, dtype)
+                        DataTypes.infer(v, dtype)  # handles None gracefully.
                         c += 1
                     except (ValueError, TypeError):
-                        pass
+                        break
                 works.append((c, dtype))
                 if c == len(values):
                     break  # we have a complete match for the simplest
@@ -2008,6 +2063,7 @@ def file_reader(path, **kwargs):
 
     tables = reader(path, **kwargs)
     assert isinstance(tables, list), "programmer forgot to return a list of tables."
+    assert all(isinstance(i, Table) for i in tables), "programmer returned something else than a Table"
     for table in tables:
         find_format(table)
     return tables
@@ -2180,7 +2236,8 @@ def text_reader_test_08():
     start = process_time_ns()
     table = file_reader(path)[0]
     end = process_time_ns()
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(table_source)
     assert len(table) == 9999, len(table)
 
@@ -2210,7 +2267,8 @@ def text_reader_test_09():
     table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(large_skus)
     assert len(table) == 45745, len(table)
 
@@ -2230,7 +2288,8 @@ def text_reader_test_10():
     end = process_time_ns()
     table.show(slice(5))
 
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(messy_orderlines)
     assert len(table) == 1997, len(table)
 
@@ -2249,7 +2308,8 @@ def text_reader_test_11():
     end = process_time_ns()
     table.show(slice(5))
 
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(messy_skus)
     assert len(table) == 1358, len(table)
 
@@ -2269,7 +2329,8 @@ def text_reader_test_12():
     end = process_time_ns()
     table.show(slice(5))
 
-    print("{:,} fields/seccond".format(round((len(table) * len(table.columns)) / ((end - start) / 10e9), 0)))
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(old)
     assert len(table) == 11324, len(table)
 
@@ -2289,7 +2350,8 @@ def text_reader_test_13():
     end = process_time_ns()
     table.show(slice(5))
 
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(messy_orderlines)
     assert len(table) == 1997, len(table)
 
@@ -2323,18 +2385,21 @@ def text_reader_test_14():
     end = process_time_ns()
     table.show(slice(5))
 
-    print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / (max(1, end - start) / 10e9),0)) )
+    fields = len(table)*len(table.columns)
+    print( "{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start),0)))
     assert table.compare(sap_sample)
     assert len(table) == 20, len(table)
 
 
 def excel_reader_test_01():
     sheet1 = Table()
-    sheet1.add_column('a', int)
-    for float_type in list('bcdef'):
-        sheet1.add_column(float_type, float)
+    for column_name in list('abcdef'):
+        sheet1.add_column(column_name, int, False)
 
     sheet2 = Table()
+    sheet2.add_column('a', int, False)
+    for column_name in list('bcdef'):
+        sheet2.add_column(column_name, float, False)
 
     books = [sheet1, sheet2]
 
@@ -2345,40 +2410,38 @@ def excel_reader_test_01():
     end = process_time_ns()
 
     fields = sum(len(t)*len(t.columns) for t in tables)
-    print("{:,} fields/seccond".format(round(fields / (max(1, end - start) / 10e9), 0)))
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
 
-    for book, table in zip(books,tables):
+    for book, table in zip(books, tables):
         table.show(slice(5))
-
-
         assert table.compare(book)
-        assert len(table) == 20, len(table)
+        assert len(table) == 45, len(table)
 
 
 
 # all tests
 # ---------
-# basic_column_tests()
-# basic_table_tests()
-# lookup_tests()
-# sql_join_tests()
-# sortation_tests()
-# groupby_tests()
-# text_escape_tests()
-# text_reader_test_00()
-# text_reader_test_01()
-# text_reader_test_02()
-# text_reader_test_03()
-# text_reader_test_04()
-# text_reader_test_05()
-# text_reader_test_06()
-# text_reader_test_07()
-# text_reader_test_08()
-# text_reader_test_09()
-# text_reader_test_10()
-# text_reader_test_11()
-# text_reader_test_12()
-# text_reader_test_13()
-# text_reader_test_14()
+basic_column_tests()
+basic_table_tests()
+lookup_tests()
+sql_join_tests()
+sortation_tests()
+groupby_tests()
+text_escape_tests()
+text_reader_test_00()
+text_reader_test_01()
+text_reader_test_02()
+text_reader_test_03()
+text_reader_test_04()
+text_reader_test_05()
+text_reader_test_06()
+text_reader_test_07()
+text_reader_test_08()
+text_reader_test_09()
+text_reader_test_10()
+text_reader_test_11()
+text_reader_test_12()
+text_reader_test_13()
+text_reader_test_14()
 excel_reader_test_01()
 
