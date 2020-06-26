@@ -1,7 +1,7 @@
 import zlib
 import json
 import xlrd
-from time import process_time, process_time_ns
+from time import process_time_ns
 from itertools import count
 from datetime import datetime, date, time
 from functools import lru_cache
@@ -727,14 +727,29 @@ class Table(object):
     def __iter__(self):
         raise AttributeError("use Table.rows or Table.columns")
 
+    def _slice(self, item=None):
+        """ transforms a slice into start,stop,step"""
+        if not item:
+            item = slice(None, len(self), None)
+        else:
+            assert isinstance(item, slice)
+            
+        if item.stop < 0:
+            start = len(self) + item.stop
+            stop = len(self)
+            step = 1 if item.step is None else item.step
+        else:
+            start = 0 if item.start is None else item.start
+            stop = item.stop
+            step = 1 if item.step is None else item.step
+        return start, stop, step
+
     def __getitem__(self, item):
         """ returns rows as a tuple """
         if isinstance(item, int):
-            item = slice(item,item+1,1)
+            item = slice(item, item + 1, 1)
         if isinstance(item, slice):
-            start = 0 if item.start is None else item.start
-            step = 1 if item.step is None else item.step
-            stop = len(self.columns) if item.stop is None else item.stop
+            start, stop, step = self._slice(item)
 
             t = Table()
             for col in self.columns.values():
@@ -888,21 +903,12 @@ class Table(object):
             slc = slices[0]
         assert isinstance(slc, slice)
 
-        if slc.stop < 0:
-            start = len(self) + slc.stop
-            stop = len(self)
-            step = 1 if slc.step is None else slc.step
-        else:
-            start = 0 if slc.start is None else slc.start
-            stop = slc.stop
-            step = 1 if slc.step is None else slc.step
-
         headers = [i for i in items if isinstance(i, str)]
         if any(h not in self.columns for h in headers): 
             raise ValueError(f"column not found: {[h for h in headers if h not in self.columns]}") 
         
         L = [self.columns[h] for h in headers]
-        for ix in range(start, stop, step):
+        for ix in range(*self._slice(slc)):
             item = tuple(c[ix] if ix < len(c) else None for c in L)
             yield item
 
@@ -2497,6 +2503,27 @@ def excel_reader_test_03():
     assert len(table) == 2, len(table)
 
 
+def excel_reader_test_04():
+    path = Path(__file__).parent / "files" / 'dirty_excel_date.xlsx'
+    assert path.exists()
+    table = file_reader(path)[0]
+    assert isinstance(table, Table)
+    show = table[slice(0, 5)]
+    show += table[slice(7000,7005)]
+    show += table[slice(-5)]
+    show.show()  # This is why it's called dirty data:
+
+    sheet1 = Table(filename=path.name, sheet_name='Tue')
+    sheet1.add_column('Transaction Date', str, False)
+    sheet1.add_column('Transaction Time', str, False)
+
+    assert table.compare(sheet1)
+    assert len(table) == 24481, len(table)
+
+    assert set(table['Transaction Date']) == {'43683.0', '2019-8-6'}
+    assert len([i for i in table['Transaction Time'] if ":" in i]) == 17213
+    assert len([i for i in table['Transaction Time'] if ":" not in i]) ==7268
+
 
 # all tests
 # ---------
@@ -2526,3 +2553,4 @@ text_reader_test_14()
 excel_reader_test_01()
 excel_reader_test_02()
 excel_reader_test_03()
+excel_reader_test_04()
