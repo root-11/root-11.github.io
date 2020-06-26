@@ -221,9 +221,9 @@ class DataTypes(object):
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
-            if value in "TruetrueTRUE":
+            if value.lower() == "true":
                 return True
-            elif value in "FalsefalseFALSE":
+            elif value.lower() == "false":
                 return False
             else:
                 pass
@@ -595,9 +595,9 @@ def basic_column_tests():
 
 
 class Table(object):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.columns = {}
-        self.metadata = {}
+        self.metadata = {**kwargs}
 
     def __eq__(self, other):
         if not isinstance(other, Table):
@@ -1840,6 +1840,7 @@ def text_reader(path, split_sequence=None, sep=None):
         sep = detect_seperator(path, encoding)
 
     t = Table()
+    t.metadata['filename'] = path.name
     n_columns = None
     with path.open('r', encoding=encoding) as fi:
         for line in fi:
@@ -1931,13 +1932,13 @@ def excel_reader(path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
     sheets = xlrd.open_workbook(str(path), logfile='', on_demand=True)
     assert isinstance(sheets, xlrd.Book)
-
     tables = []
     for sheet in sheets.sheets():
         if sheet.nrows == sheet.ncols == 0:
             continue
         else:
             table = excel_sheet_reader(sheet)
+            table.metadata['filename'] = path.name
             tables.append(table)
     return tables
 
@@ -1964,8 +1965,14 @@ def excel_sheet_reader(sheet):
                        5: lambda x: str(x)}  # error code
 
     t = Table()
+    t.metadata['sheet_name'] = sheet.name
+
     for column_index in range(sheet.ncols):
-        data = sheet.col_values(column_index)
+        data = []
+        for row_index in range(sheet.nrows):
+            etype = sheet.cell_type(row_index, column_index)
+            value = sheet.cell_value(row_index, column_index)
+            data.append(excel_datatypes[etype](value))
 
         dtypes = {type(v) for v in data[1:]}
         allow_empty = True if None in dtypes else False
@@ -1975,9 +1982,7 @@ def excel_sheet_reader(sheet):
             header, dtype, data = str(data[0]), dtypes.pop(), data[1:]
         else:
             header, dtype, data = str(data[0]), str, [str(v) for v in data[1:]]
-
         t.add_column(header, dtype, allow_empty, data)
-
     return t
 
 
@@ -2073,7 +2078,10 @@ def file_reader(path, **kwargs):
 #---------------------
 
 def text_reader_test_00():
-    table7 = Table()
+    csv_file = Path(__file__).parent / "files" / "123.csv"
+
+    table7 = Table(filename=csv_file.name)
+    table7.metadata['filename'] = '123.csv'
     table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
     table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
     table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
@@ -2085,7 +2093,6 @@ def text_reader_test_00():
     for row in table7.rows:
         data.append(", ".join(str(v) for v in row))
 
-    csv_file = Path(__file__).parent / "files" / "123.csv"
     s = "\n".join(data)
     print(s)
     csv_file.write_text(s)  # write
@@ -2099,7 +2106,12 @@ def text_reader_test_00():
 
 
 def text_reader_test_01():
-    amcap_test_data = Table()
+    path = Path(__file__).parent / "files" / 'amcap_test_data.csv'
+    assert path.exists()
+    table = file_reader(path)[0]
+    table.show()
+
+    amcap_test_data = Table(filename=path.name)
     for int_type in ['sku', 'quantity', "ti", "hi"]:
         amcap_test_data.add_column(int_type, int)
     for float_type in ["L", "W", "H", "weight", ]:
@@ -2109,60 +2121,65 @@ def text_reader_test_01():
     for boolean in ["liquid", "manual", "fragile"]:
         amcap_test_data.add_column(boolean, bool)
 
-    path = Path(__file__).parent / "files" / 'amcap_test_data.csv'
-    assert path.exists()
-    table = file_reader(path)[0]
-    table.show()
     assert table.compare(amcap_test_data), table.compare(amcap_test_data)
     assert len(table) == 5
 
 
 def text_reader_test_02():
-    book1_csv = Table()
-    book1_csv.add_column('a', int)
-    for float_type in list('bcdef'):
-        book1_csv.add_column(float_type, float)
-
     path = Path(__file__).parent / "files" / 'book1.csv'
     assert path.exists()
     table = file_reader(path)[0]
     table.show(slice(0,10))
+
+    book1_csv = Table(filename=path.name)
+    book1_csv.add_column('a', int)
+    for float_type in list('bcdef'):
+        book1_csv.add_column(float_type, float)
+
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 45
 
 
 def text_reader_test_03():
-    book1_csv = Table()
-    book1_csv.add_column('a', int)
-    for float_type in list('bcdef'):
-        book1_csv.add_column(float_type, float)
-
     path = Path(__file__).parent / "files" / 'book1.txt'
     assert path.exists()
     table = file_reader(path)[0]
     table.show(slice(0,10))
+
+    book1_csv = Table(filename=path.name)
+    book1_csv.add_column('a', int)
+    for float_type in list('bcdef'):
+        book1_csv.add_column(float_type, float)
+
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 45
 
 
 def text_reader_test_04():
-    book1_csv = Table()
+    path = Path(__file__).parent / "files" / 'box_packer_test_data.csv'
+    assert path.exists()
+    table = file_reader(path)[0]
+    table.show(slice(0, 10))
+
+    book1_csv = Table(filename=path.name)
     headers = "TestCase,Numerat.,Denom.,Volume,Gross weight,pcs per outer,L (carton),W (carton),H (carton),Effective Casepack per layer (Ti),Effective pcs per layer,Hi (1.20m) CHEP,Hi (2.00m) CHEP,Hi (1.80m) 1-WAY,Effective pieces per 1.275m pallet,Packed pallet height,Total Netto weight,Total Netto Volume,Waste%A"
     headers = headers.split(",")
     book1_csv.add_column(headers[0], str)
     for float_type in headers[1:]:
         book1_csv.add_column(float_type.rstrip().lstrip(), float)
 
-    path = Path(__file__).parent / "files" / 'box_packer_test_data.csv'
-    assert path.exists()
-    table = file_reader(path)[0]
-    table.show(slice(0, 10))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 5856, len(table)
 
 
 def text_reader_test_05():
-    book1_csv = Table()
+    path = Path(__file__).parent / "files" / 'empty_column_values.csv'
+    assert path.exists()
+    table = file_reader(path)[0]
+    table.show(slice(0, 10))
+    table.show(slice(-15))
+
+    book1_csv = Table(filename=path.name)
     headers = "Date,OrderId,Customer,SKU,Qty"
     headers = headers.split(",")
     book1_csv.add_column(headers[0], date, allow_empty=True)
@@ -2170,51 +2187,55 @@ def text_reader_test_05():
         book1_csv.add_column(float_type.rstrip().lstrip(), int, allow_empty=True)
     book1_csv.add_column(headers[-1], float, allow_empty=True)
 
-    path = Path(__file__).parent / "files" / 'empty_column_values.csv'
-    assert path.exists()
-    table = file_reader(path)[0]
-    table.show(slice(0, 10))
-    table.show(slice(-15))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 53, len(table)
 
 
 def text_reader_test_06():
-    book1_csv = Table()
-    book1_csv.add_column('Item', int)
-    book1_csv.add_column('Materiál', str)
-    book1_csv.add_column('Objem', float)
-    book1_csv.add_column('Jednotka objemu', str)
-    book1_csv.add_column('Free Inv Pcs', int)
-
     path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
     assert path.exists()
     table = file_reader(path, sep=';')[0]
     table.show(slice(0, 10))
     table.show(slice(-15))
-    assert table.compare(book1_csv), table.compare(book1_csv)
-    assert len(table) == 99, len(table)
 
-
-def text_reader_test_07():
-    book1_csv = Table()
+    book1_csv = Table(filename=path.name)
     book1_csv.add_column('Item', int)
     book1_csv.add_column('Materiál', str)
     book1_csv.add_column('Objem', float)
     book1_csv.add_column('Jednotka objemu', str)
     book1_csv.add_column('Free Inv Pcs', int)
 
+    assert table.compare(book1_csv), table.compare(book1_csv)
+    assert len(table) == 99, len(table)
+
+
+def text_reader_test_07():
     path = Path(__file__).parent / "files" / 'encoding_windows1250_test.csv'
     assert path.exists()
     table = file_reader(path, sep=';')[0]
     table.show(slice(0, 10))
     table.show(slice(-15))
+
+    book1_csv = Table(filename=path.name)
+    book1_csv.add_column('Item', int)
+    book1_csv.add_column('Materiál', str)
+    book1_csv.add_column('Objem', float)
+    book1_csv.add_column('Jednotka objemu', str)
+    book1_csv.add_column('Free Inv Pcs', int)
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 99, len(table)
 
 
 def text_reader_test_08():
-    table_source = Table()
+    path = Path(__file__).parent / "files" / 'frito.csv'
+    assert path.exists()
+    start = process_time_ns()
+    table = file_reader(path)[0]
+    end = process_time_ns()
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    table_source = Table(filename=path.name)
     table_source.add_column('prod_slbl', int)
     table_source.add_column('sale_date', datetime)
     table_source.add_column('cust_nbr', int)
@@ -2230,20 +2251,21 @@ def text_reader_test_08():
     table_source.add_column('SKU', int)
     table_source.add_column('Order_Number', str)
     table_source.add_column('cases', int)
-
-    path = Path(__file__).parent / "files" / 'frito.csv'
-    assert path.exists()
-    start = process_time_ns()
-    table = file_reader(path)[0]
-    end = process_time_ns()
-    fields = len(table) * len(table.columns)
-    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(table_source)
     assert len(table) == 9999, len(table)
 
 
 def text_reader_test_09():
-    large_skus = Table()
+    path = Path(__file__).parent / "files" / 'large_skus.csv'
+    assert path.exists()
+    start = process_time_ns()
+    table = file_reader(path)[0]
+    end = process_time_ns()
+    table.show(slice(5))
+    fields = len(table) * len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    large_skus = Table(filename=path.name)
     large_skus.add_column('LadeGrp', int, False)
     large_skus.add_column('Einkaufsgruppe (Purchase Group)', int, False)
     large_skus.add_column('Artikelnummer (SKU ID)', int, False)
@@ -2261,67 +2283,52 @@ def text_reader_test_09():
     large_skus.add_column('Umkarton Inhalt (pieces per outer package)', str, True)
     large_skus.add_column('Display-paletten (display pallet)', str, True)
 
-    path = Path(__file__).parent / "files" / 'large_skus.csv'
-    assert path.exists()
-    start = process_time_ns()
-    table = file_reader(path)[0]
-    end = process_time_ns()
-    table.show(slice(5))
-    fields = len(table) * len(table.columns)
-    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
     assert table.compare(large_skus)
     assert len(table) == 45745, len(table)
 
 
 def text_reader_test_10():
-    messy_orderlines = Table()
-    messy_orderlines.add_column('Date', date, False)
-    messy_orderlines.add_column('OrderId', int, False)
-    messy_orderlines.add_column('Customer', int, False)
-    messy_orderlines.add_column('SKU', int, False)
-    messy_orderlines.add_column('Qty', float, False)
-
     path = Path(__file__).parent / "files" / 'messy_orderlines.csv'
     assert path.exists()
     start = process_time_ns()
     table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
-
     fields = len(table) * len(table.columns)
     print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    messy_orderlines = Table(filename=path.name)
+    messy_orderlines.add_column('Date', date, False)
+    messy_orderlines.add_column('OrderId', int, False)
+    messy_orderlines.add_column('Customer', int, False)
+    messy_orderlines.add_column('SKU', int, False)
+    messy_orderlines.add_column('Qty', float, False)
+
     assert table.compare(messy_orderlines)
     assert len(table) == 1997, len(table)
 
 
 def text_reader_test_11():
-    messy_skus = Table()
-    messy_skus.add_column('SKU', int, True)
-    messy_skus.add_column('Length', str, True)  # there's a minus in one field.
-    messy_skus.add_column('Width', str, True)
-    messy_skus.add_column('Height', str, True)
-
     path = Path(__file__).parent / "files" / 'messy_skus.csv'
     assert path.exists()
     start = process_time_ns()
     table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
-
     fields = len(table) * len(table.columns)
     print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    messy_skus = Table(filename=path.name)
+    messy_skus.add_column('SKU', int, True)
+    messy_skus.add_column('Length', str, True)  # there's a minus in one field.
+    messy_skus.add_column('Width', str, True)
+    messy_skus.add_column('Height', str, True)
+
     assert table.compare(messy_skus)
     assert len(table) == 1358, len(table)
 
 
 def text_reader_test_12():
-    old = Table()  # date,orderid,customerid,sku,quantity
-    old.add_column('date', datetime, False)
-    old.add_column('orderid', int, False)
-    old.add_column('customerid', int, False)
-    old.add_column('sku', int, False)
-    old.add_column('quantity', int, False)
-
     path = Path(__file__).parent / "files" / 'orderline_data_to_forecast.csv'
     assert path.exists()
     start = process_time_ns()
@@ -2331,35 +2338,54 @@ def text_reader_test_12():
 
     fields = len(table) * len(table.columns)
     print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    old = Table(filename=path.name)  # date,orderid,customerid,sku,quantity
+    old.add_column('date', datetime, False)
+    old.add_column('orderid', int, False)
+    old.add_column('customerid', int, False)
+    old.add_column('sku', int, False)
+    old.add_column('quantity', int, False)
+
     assert table.compare(old)
     assert len(table) == 11324, len(table)
 
 
 def text_reader_test_13():
-    messy_orderlines = Table()
-    messy_orderlines.add_column('Date', date, False)
-    messy_orderlines.add_column('OrderId', int, False)
-    messy_orderlines.add_column('Customer', int, False)
-    messy_orderlines.add_column('SKU', int, False)
-    messy_orderlines.add_column('Qty', int, False)
-
     path = Path(__file__).parent / "files" / 'orderlines.csv'
     assert path.exists()
     start = process_time_ns()
     table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
-
     fields = len(table) * len(table.columns)
     print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    messy_orderlines = Table(filename=path.name)
+    messy_orderlines.add_column('Date', date, False)
+    messy_orderlines.add_column('OrderId', int, False)
+    messy_orderlines.add_column('Customer', int, False)
+    messy_orderlines.add_column('SKU', int, False)
+    messy_orderlines.add_column('Qty', int, False)
+
     assert table.compare(messy_orderlines)
     assert len(table) == 1997, len(table)
 
 
 def text_reader_test_14():
+    path = Path(__file__).parent / "files" / 'sap_sample.txt'
+    assert path.exists()
+    # test part 1: split using user defined sequence.
+    start = process_time_ns()
     header = "    | Delivery |  Item|Pl.GI date|Route |SC|Ship-to   |SOrg.|Delivery quantity|SU| TO Number|Material    |Dest.act.qty.|BUn|Typ|Source Bin|Cty"
     split_sequence = ["|"] * header.count('|')
-    sap_sample = Table()
+    table = file_reader(path, split_sequence=split_sequence)[0]
+    end = process_time_ns()
+    table.show(slice(5))
+
+    fields = len(table)*len(table.columns)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    sap_sample = Table(filename=path.name)
     sap_sample.add_column('None', str, True)
     sap_sample.add_column('Delivery', int, False)
     sap_sample.add_column('Item', int, False)
@@ -2378,30 +2404,11 @@ def text_reader_test_14():
     sap_sample.add_column('Source Bin', str, False)
     sap_sample.add_column('Cty|', str, False)
 
-    path = Path(__file__).parent / "files" / 'sap_sample.txt'
-    assert path.exists()
-    start = process_time_ns()
-    table = file_reader(path, split_sequence=split_sequence)[0]
-    end = process_time_ns()
-    table.show(slice(5))
-
-    fields = len(table)*len(table.columns)
-    print( "{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start),0)))
     assert table.compare(sap_sample)
     assert len(table) == 20, len(table)
 
 
 def excel_reader_test_01():
-    sheet1 = Table()
-    for column_name in list('abcdef'):
-        sheet1.add_column(column_name, int, False)
-
-    sheet2 = Table()
-    sheet2.add_column('a', int, False)
-    for column_name in list('bcdef'):
-        sheet2.add_column(column_name, float, False)
-
-    books = [sheet1, sheet2]
 
     path = Path(__file__).parent / "files" / 'book1.xlsx'
     assert path.exists()
@@ -2412,10 +2419,63 @@ def excel_reader_test_01():
     fields = sum(len(t)*len(t.columns) for t in tables)
     print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
 
+    sheet1 = Table(filename=path.name, sheet_name='Sheet1')
+    for column_name in list('abcdef'):
+        sheet1.add_column(column_name, int, False)
+
+    sheet2 = Table(filename=path.name, sheet_name='Sheet2 ')  # there's a deliberate white space at the end!
+    sheet2.add_column('a', int, False)
+    for column_name in list('bcdef'):
+        sheet2.add_column(column_name, float, False)
+
+    books = [sheet1, sheet2]
+
     for book, table in zip(books, tables):
         table.show(slice(5))
         assert table.compare(book)
         assert len(table) == 45, len(table)
+
+
+def excel_reader_test_02():
+    path = Path(__file__).parent / "files" / 'aldi_unit_test_data.xlsx'
+    assert path.exists()
+    start = process_time_ns()
+    tables = file_reader(path)
+    end = process_time_ns()
+
+    fields = sum(len(t) * len(t.columns) for t in tables)
+    print("{:,} fields/seccond".format(round(1e9 * fields / max(1, end - start), 0)))
+
+    sheet1 = Table(filename=path.name, sheet_name='Data')
+    sheet1.add_column('Date', date, False)
+
+    columns = ['Pallets_2016', 'Pallets_2024', 'Pallets_2030', 'AMCAP_2016', 'AMCAP_2024', 'AMCAP_2030', 'Total Cases', 'ContainerCases']
+    for column_name in columns:
+        sheet1.add_column(column_name, int, False)
+
+    sheet2 = Table(filename=path.name, sheet_name='SKU A')
+    sheet2.add_column('Date', date, False)
+    sheet2.add_column('SKU', str, False)
+
+    columns = ['Pallets_2016', 'AMCAP_2016', 'Pallets_2024', 'AMCAP_2024', 'Pallets_2030', 'AMCAP_2030', 'Xdock2016', 'Xdock2024', 'Xdock2030']
+    for column_name in columns:
+        sheet2.add_column(column_name, int, False)
+
+    sheet3 = Table(filename=path.name, sheet_name='SKU B')
+    sheet3.add_column('Date', date, False)
+    sheet3.add_column('SKU', str, False)
+
+    columns = ['Pallets_2016', 'AMCAP_2016', 'Pallets_2024', 'AMCAP_2024', 'Pallets_2030', 'AMCAP_2030', 'Xdock2016', 'Xdock2024', 'Xdock2030']
+    for column_name in columns:
+        sheet3.add_column(column_name, int, False)
+
+    books = [sheet1, sheet2, sheet3]
+
+    for book, table in zip(books, tables):
+        table.show(slice(5))
+        assert table.compare(book)
+        assert len(table) == 365, len(table)
+
 
 
 
@@ -2444,4 +2504,4 @@ text_reader_test_12()
 text_reader_test_13()
 text_reader_test_14()
 excel_reader_test_01()
-
+excel_reader_test_02()
