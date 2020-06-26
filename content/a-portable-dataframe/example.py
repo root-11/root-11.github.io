@@ -569,22 +569,23 @@ class Column(list):
         super().__setitem__(key, value)
 
 
-# creating a column remains easy:
-c = Column('A', int, False)
+def basic_column_tests():
+    # creating a column remains easy:
+    c = Column('A', int, False)
 
-# so does adding values:
-c.append(44)
-c.append(44)
-assert len(c) == 2
+    # so does adding values:
+    c.append(44)
+    c.append(44)
+    assert len(c) == 2
 
-# and converting to and from json
-d = c.to_json()
-c2 = Column.from_json(d)
-assert len(c2) == 2
+    # and converting to and from json
+    d = c.to_json()
+    c2 = Column.from_json(d)
+    assert len(c2) == 2
 
-# comparing columns is easy:
-assert c == c2
-assert c != Column('A', str, False)
+    # comparing columns is easy:
+    assert c == c2
+    assert c != Column('A', str, False)
 
 
 class Table(object):
@@ -955,6 +956,15 @@ class Table(object):
             t.add_column(col.header, col.datatype, col.allow_empty, data=[col[ix] for ix in ixs])
         return t
 
+    def _join_type_check(self, other, keys, columns):
+        if not isinstance(other, Table):
+            raise TypeError(f"Expected other to be type Table, not {type(other)}")
+        if not isinstance(keys, list) and all(isinstance(k,str) for k in keys):
+            raise TypeError(f"Expected keys as list of strings, not {type(keys)}")
+        if not all(k in self.columns and k in other.columns for k in keys):
+            union = list(self.columns) + list(other.columns)
+            raise ValueError(f"column(s) not found: {[k for k in keys if k not in union]}")
+
     def left_join(self, other, keys, columns):
         """
         :param other: self, other = (left, right)
@@ -966,9 +976,7 @@ class Table(object):
         SQL:   SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
         Table: left_join = left_table.left_join(right_table, keys=['colour'], columns=['number', 'letter'])
         """
-        assert isinstance(other, Table)
-        assert isinstance(keys, list)
-        assert all(k in self.columns and k in other.columns for k in keys)
+        self._join_type_check(other, keys, columns)  # raises if error
 
         left_join = Table()
         for col_name in columns:
@@ -980,19 +988,19 @@ class Table(object):
                 raise ValueError(f"column name '{col_name}' not in any table.")
             left_join.add_column(col_name, col.datatype, allow_empty=True)
 
-        left_ixs = range(len(left))
-        right_idx = right.index(*keys)
+        left_ixs = range(len(self))
+        right_idx = other.index(*keys)
 
         for left_ix in left_ixs:
-            key = tuple(left[h][left_ix] for h in keys)
+            key = tuple(self[h][left_ix] for h in keys)
             right_ixs = right_idx.get(key, (None,))
             for right_ix in right_ixs:
                 for col_name, column in left_join.columns.items():
-                    if col_name in left:
-                        column.append(left[col_name][left_ix])
-                    elif col_name in right:
+                    if col_name in self:
+                        column.append(self[col_name][left_ix])
+                    elif col_name in other:
                         if right_ix is not None:
-                            column.append(right[col_name][right_ix])
+                            column.append(other[col_name][right_ix])
                         else:
                             column.append(None)
                     else:
@@ -1010,6 +1018,8 @@ class Table(object):
         SQL:   SELECT number, letter FROM left INNER JOIN right ON left.colour == right.colour
         Table: inner_join = left_table.inner_join_with(right_table, keys=['colour'],  columns=['number','letter'])
         """
+        self._join_type_check(other, keys, columns)  # raises if error
+
         inner_join = Table()
         for col_name in columns:
             if col_name in self.columns:
@@ -1020,19 +1030,19 @@ class Table(object):
                 raise ValueError(f"column name '{col_name}' not in any table.")
             inner_join.add_column(col_name, col.datatype, allow_empty=True)
 
-        key_union = set(left.filter(*keys)).intersection(set(right.filter(*keys)))
+        key_union = set(self.filter(*keys)).intersection(set(other.filter(*keys)))
 
-        left_ixs = left.index(*keys)
-        right_ixs = right.index(*keys)
+        left_ixs = self.index(*keys)
+        right_ixs = other.index(*keys)
 
         for key in key_union:
             for left_ix in left_ixs.get(key, set()):
                 for right_ix in right_ixs.get(key, set()):
                     for col_name, column in inner_join.columns.items():
-                        if col_name in left:
-                            column.append(left[col_name][left_ix])
-                        elif col_name in right:
-                            column.append(right[col_name][right_ix])
+                        if col_name in self:
+                            column.append(self[col_name][left_ix])
+                        elif col_name in other:
+                            column.append(other[col_name][right_ix])
                         else:
                             raise Exception("bad logic.")
         return inner_join
@@ -1048,6 +1058,8 @@ class Table(object):
         SQL:   SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
         Table: outer_join = left_table.outer_join(right_table, keys=['colour'], columns=['number','letter'])
         """
+        self._join_type_check(other, keys, columns)  # raises if error
+
         outer_join = Table()
         for col_name in columns:
             if col_name in self.columns:
@@ -1058,21 +1070,21 @@ class Table(object):
                 raise ValueError(f"column name '{col_name}' not in any table.")
             outer_join.add_column(col_name, col.datatype, allow_empty=True)
 
-        left_ixs = range(len(left))
-        right_idx = right.index(*keys)
+        left_ixs = range(len(self))
+        right_idx = other.index(*keys)
         right_keyset = set(right_idx)
 
         for left_ix in left_ixs:
-            key = tuple(left[h][left_ix] for h in keys)
+            key = tuple(self[h][left_ix] for h in keys)
             right_ixs = right_idx.get(key, (None,))
             right_keyset.discard(key)
             for right_ix in right_ixs:
                 for col_name, column in outer_join.columns.items():
-                    if col_name in left:
-                        column.append(left[col_name][left_ix])
-                    elif col_name in right:
+                    if col_name in self:
+                        column.append(self[col_name][left_ix])
+                    elif col_name in other:
                         if right_ix is not None:
-                            column.append(right[col_name][right_ix])
+                            column.append(other[col_name][right_ix])
                         else:
                             column.append(None)
                     else:
@@ -1081,250 +1093,260 @@ class Table(object):
         for right_key in right_keyset:
             for right_ix in right_idx[right_key]:
                 for col_name, column in outer_join.columns.items():
-                    if col_name in left:
+                    if col_name in self:
                         column.append(None)
-                    elif col_name in right:
-                        column.append(right[col_name][right_ix])
+                    elif col_name in other:
+                        column.append(other[col_name][right_ix])
                     else:
                         raise Exception('bad logic')
         return outer_join
 
 
-# creating a table incrementally is straight forward:
-table = Table()
-table.add_column('A', int, False)
-assert 'A' in table
+def basic_table_tests():
+    # creating a table incrementally is straight forward:
+    table = Table()
+    table.add_column('A', int, False)
+    assert 'A' in table
 
-table.add_column('B', str, allow_empty=False)
-assert 'B' in table
+    table.add_column('B', str, allow_empty=False)
+    assert 'B' in table
 
-# appending rows is easy:
-table.add_row((1, 'hello'))
-table.add_row((2, 'world'))
+    # appending rows is easy:
+    table.add_row((1, 'hello'))
+    table.add_row((2, 'world'))
 
-# converting to and from json is easy:
-table_as_json = table.to_json()
-table2 = Table.from_json(table_as_json)
+    # converting to and from json is easy:
+    table_as_json = table.to_json()
+    table2 = Table.from_json(table_as_json)
 
-zipped = zlib.compress(table_as_json.encode())
-a, b = len(zipped), len(table_as_json)
-print("zipping reduces to", a, "from", b, "bytes, e.g.", round(100 * a / b, 0), "% of original")
+    zipped = zlib.compress(table_as_json.encode())
+    a, b = len(zipped), len(table_as_json)
+    print("zipping reduces to", a, "from", b, "bytes, e.g.", round(100 * a / b, 0), "% of original")
 
-# copying is easy:
-table3 = table.copy()
+    # copying is easy:
+    table3 = table.copy()
 
-# and checking for headers is simple:
-assert 'A' in table
-assert 'Z' not in table
+    # and checking for headers is simple:
+    assert 'A' in table
+    assert 'Z' not in table
 
-# comparisons are straight forward:
-assert table == table2 == table3
+    # comparisons are straight forward:
+    assert table == table2 == table3
 
-# even if you only want to check metadata:
-table.compare(table3)  # will raise exception if they're different.
+    # even if you only want to check metadata:
+    table.compare(table3)  # will raise exception if they're different.
 
-# append is easy as + also work:
-table3x2 = table3 + table3
-assert len(table3x2) == len(table3) * 2
+    # append is easy as + also work:
+    table3x2 = table3 + table3
+    assert len(table3x2) == len(table3) * 2
 
-# and so does +=
-table3x2 += table3
-assert len(table3x2) == len(table3) * 3
+    # and so does +=
+    table3x2 += table3
+    assert len(table3x2) == len(table3) * 3
 
-# type verification is included:
-try:
-    table.columns['A'][0] = 'Hallo'
-    assert False, "A TypeError should have been raised."
-except TypeError:
-    assert True
+    # type verification is included:
+    try:
+        table.columns['A'][0] = 'Hallo'
+        assert False, "A TypeError should have been raised."
+    except TypeError:
+        assert True
 
-# updating values is familiar to any user who likes a list:
-assert 'A' in table.columns
-assert isinstance(table.columns['A'], list)
-last_row = -1
-table['A'][last_row] = 44
-table['B'][last_row] = "Hallo"
+    # updating values is familiar to any user who likes a list:
+    assert 'A' in table.columns
+    assert isinstance(table.columns['A'], list)
+    last_row = -1
+    table['A'][last_row] = 44
+    table['B'][last_row] = "Hallo"
 
-assert table != table2
+    assert table != table2
 
-# if you try to loop and forget the direction, Table will tell you
-try:
-    for row in table: # wont pass
-        assert False, "not possible. Use for row in table.rows or for column in table.columns"
-except AttributeError:
-    assert True
+    # if you try to loop and forget the direction, Table will tell you
+    try:
+        for row in table: # wont pass
+            assert False, "not possible. Use for row in table.rows or for column in table.columns"
+    except AttributeError:
+        assert True
 
-_ = [table2.add_row(row) for row in table.rows]
+    _ = [table2.add_row(row) for row in table.rows]
 
-before = [r for r in table2.rows]
-assert before == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
+    before = [r for r in table2.rows]
+    assert before == [(1, 'hello'), (2, 'world'), (1, 'hello'), (44, 'Hallo')]
 
-# as is filtering for ALL that match:
-filter_1 = lambda x: 'llo' in x
-filter_2 = lambda x: x > 3
+    # as is filtering for ALL that match:
+    filter_1 = lambda x: 'llo' in x
+    filter_2 = lambda x: x > 3
 
-after = table2.all(**{'B': filter_1, 'A': filter_2})
+    after = table2.all(**{'B': filter_1, 'A': filter_2})
 
-assert list(after.rows) == [(44, 'Hallo')]
+    assert list(after.rows) == [(44, 'Hallo')]
 
-# as is filtering or for ANY that match:
-after = table2.any(**{'B': filter_1, 'A': filter_2})
+    # as is filtering or for ANY that match:
+    after = table2.any(**{'B': filter_1, 'A': filter_2})
 
-assert list(after.rows) == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
+    assert list(after.rows) == [(1, 'hello'), (1, 'hello'), (44, 'Hallo')]
 
-# Imagine a table with columns a,b,c,d,e (all integers) like this:
-t = Table()
-for c in 'abcde':
-    t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)])
+    # Imagine a table with columns a,b,c,d,e (all integers) like this:
+    t = Table()
+    for c in 'abcde':
+        t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)])
 
-# we want to add two new columns using the functions:
-def f1(a,b,c): return a+b+c+1
-def f2(b,c,d): return b*c*d
+    # we want to add two new columns using the functions:
+    def f1(a,b,c): return a+b+c+1
+    def f2(b,c,d): return b*c*d
 
-# and we want to compute two new columns 'f' and 'g':
-t.add_column(header='f', datatype=int, allow_empty=False)
-t.add_column(header='g', datatype=int, allow_empty=True)
+    # and we want to compute two new columns 'f' and 'g':
+    t.add_column(header='f', datatype=int, allow_empty=False)
+    t.add_column(header='g', datatype=int, allow_empty=True)
 
-# we can now use the filter, to iterate over the table:
-for row in t.filter('a', 'b', 'c', 'd'):
-    a, b, c, d = row
+    # we can now use the filter, to iterate over the table:
+    for row in t.filter('a', 'b', 'c', 'd'):
+        a, b, c, d = row
 
-    # ... and add the values to the two new columns
-    t['f'].append(f1(a, b, c))
-    t['g'].append(f2(b, c, d))
+        # ... and add the values to the two new columns
+        t['f'].append(f1(a, b, c))
+        t['g'].append(f2(b, c, d))
 
-assert len(t) == 5
-assert list(t.columns) == list('abcdefg')
-t.show()
+    assert len(t) == 5
+    assert list(t.columns) == list('abcdefg')
+    t.show()
 
 
-# slicing is easy:
-table_chunk = table2[2:4]
-assert isinstance(table_chunk, Table)
+    # slicing is easy:
+    table_chunk = table2[2:4]
+    assert isinstance(table_chunk, Table)
 
-# we will handle duplicate names gracefully.
-table2.add_column('B', int, allow_empty=True)
-assert set(table2.columns) == {'A', 'B', 'B_1'}
+    # we will handle duplicate names gracefully.
+    table2.add_column('B', int, allow_empty=True)
+    assert set(table2.columns) == {'A', 'B', 'B_1'}
 
-# you can delete a column as key...
-del table2['B_1']
-assert set(table2.columns) == {'A', 'B'}
+    # you can delete a column as key...
+    del table2['B_1']
+    assert set(table2.columns) == {'A', 'B'}
 
-# adding a computed column is easy:
-table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
+    # adding a computed column is easy:
+    table.add_column('new column', str, allow_empty=False, data=[f"{r}" for r in table.rows])
 
-# part of or the whole table is easy:
-table.show()
+    # part of or the whole table is easy:
+    table.show()
 
-table.show('A', slice(0, 1))
+    table.show('A', slice(0, 1))
 
-# updating a column with a function is easy:
-f = lambda x: x * 10
-table['A'] = [f(r) for r in table['A']]
-
-# using regular indexing will also work.
-for ix, r in enumerate(table['A']):
-    table['A'][ix] = r * 10
-
-# and it will tell you if you're not allowed:
-try:
-    f = lambda x: f"'{x} as text'"
+    # updating a column with a function is easy:
+    f = lambda x: x * 10
     table['A'] = [f(r) for r in table['A']]
-    assert False, "The line above must raise a TypeError"
-except TypeError as error:
-    print("The error is:", str(error))
+
+    # using regular indexing will also work.
+    for ix, r in enumerate(table['A']):
+        table['A'][ix] = r * 10
+
+    # and it will tell you if you're not allowed:
+    try:
+        f = lambda x: f"'{x} as text'"
+        table['A'] = [f(r) for r in table['A']]
+        assert False, "The line above must raise a TypeError"
+    except TypeError as error:
+        print("The error is:", str(error))
 
 
-# works with all datatypes:
-now = datetime.now()
+    # works with all datatypes:
+    now = datetime.now()
 
-table4 = Table()
-table4.add_column('A', int, False, data=[-1, 1])
-table4.add_column('A', int, True, data=[None, 1])  # None!
-table4.add_column('A', float, False, data=[-1.1, 1.1])
-table4.add_column('A', str, False, data=["", "1"])
-table4.add_column('A', bool, False, data=[False, True])
-table4.add_column('A', datetime, False, data=[now, now])
-table4.add_column('A', date, False, data=[now.date(), now.date()])
-table4.add_column('A', time, False, data=[now.time(), now.time()])
+    table4 = Table()
+    table4.add_column('A', int, False, data=[-1, 1])
+    table4.add_column('A', int, True, data=[None, 1])  # None!
+    table4.add_column('A', float, False, data=[-1.1, 1.1])
+    table4.add_column('A', str, False, data=["", "1"])
+    table4.add_column('A', bool, False, data=[False, True])
+    table4.add_column('A', datetime, False, data=[now, now])
+    table4.add_column('A', date, False, data=[now.date(), now.date()])
+    table4.add_column('A', time, False, data=[now.time(), now.time()])
 
-table4_json = table4.to_json()
-table5 = Table.from_json(table4_json)
+    table4_json = table4.to_json()
+    table5 = Table.from_json(table4_json)
 
-# .. to json and back.
-assert table4 == table5
+    # .. to json and back.
+    assert table4 == table5
 
-# And finally: I can add metadata:
-table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
-                                 'A_2': 'product.sku',
-                                 'A_4': 'locations.sender'}
+    # And finally: I can add metadata:
+    table5.metadata['db_mapping'] = {'A': 'customers.customer_name',
+                                     'A_2': 'product.sku',
+                                     'A_4': 'locations.sender'}
 
-# which also jsonifies without fuzz.
-table5_json = table5.to_json()
-table5_from_json = Table.from_json(table5_json)
-assert table5 == table5_from_json
+    # which also jsonifies without fuzz.
+    table5_json = table5.to_json()
+    table5_from_json = Table.from_json(table5_json)
+    assert table5 == table5_from_json
 
-# doing lookups is supported by indexing:
-table6 = Table()
-table6.add_column('A', str, data=['Alice', 'Bob', 'Bob', 'Ben', 'Charlie', 'Ben', 'Albert'])
-table6.add_column('B', str, data=['Alison', 'Marley', 'Dylan', 'Affleck', 'Hepburn', 'Barnes', 'Einstein'])
+def lookup_tests():  # doing lookups is supported by indexing:
+    table6 = Table()
+    table6.add_column('A', str, data=['Alice', 'Bob', 'Bob', 'Ben', 'Charlie', 'Ben', 'Albert'])
+    table6.add_column('B', str, data=['Alison', 'Marley', 'Dylan', 'Affleck', 'Hepburn', 'Barnes', 'Einstein'])
 
-index = table6.index('A')  # single key.
-assert index[('Bob',)] == {1, 2}
+    index = table6.index('A')  # single key.
+    assert index[('Bob',)] == {1, 2}
 
-index2 = table6.index('A', 'B')  # multiple keys.
-assert index2[('Bob', 'Dylan')] == {2}
-
-
-# a couple of examples with SQL join:
-left = Table()
-left.add_column('number', int, allow_empty=True, data=[1, 2, 3, 4, None])
-left.add_column('colour', str, data=['black', 'blue', 'white', 'white', 'blue'])
-
-right = Table()
-right.add_column('letter', str, allow_empty=True, data=['a', 'b', 'c', 'd', None])
-right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'])
-
-# left join
-# SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
-left_join = left.left_join(right, keys=['colour'], columns=['number', 'letter'])
-
-# inner join
-# SELECT number, letter FROM left JOIN right ON left.colour == right.colour
-inner_join = left.inner_join(right, keys=['colour'], columns=['number', 'letter'])
-
-# outer join
-# SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
-outer_join = left.outer_join(right, keys=['colour'], columns=['number', 'letter'])
+    index2 = table6.index('A', 'B')  # multiple keys.
+    assert index2[('Bob', 'Dylan')] == {2}
 
 
-# Sortation
-table7 = Table()
-table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
-table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
-table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
+def sql_join_tests():  # a couple of examples with SQL join:
 
-assert not table7.is_sorted()
+    left = Table()
+    left.add_column('number', int, allow_empty=True, data=[1, 2, 3, 4, None])
+    left.add_column('colour', str, data=['black', 'blue', 'white', 'white', 'blue'])
 
-sort_order = {'B': False, 'C': False, 'A': False}
+    right = Table()
+    right.add_column('letter', str, allow_empty=True, data=['a', 'b', 'c', 'd', None])
+    right.add_column('colour', str, data=['blue', 'white', 'orange', 'white', 'blue'])
 
-table7.sort(**sort_order)
+    # left join
+    # SELECT number, letter FROM left LEFT JOIN right on left.colour == right.colour
+    left_join = left.left_join(right, keys=['colour'], columns=['number', 'letter'])
+    left_join.show()
 
-assert list(table7.rows) == [
-    (4, 1, 0),
-    (8, 1, 0),
-    (3, 1, 1),
-    (6, 1, 1),
-    (1, 10, 0),
-    (5, 10, 0),
-    (9, 10, 0),
-    (7, 10, 1),
-    (None, 100, 1)
-]
+    # inner join
+    # SELECT number, letter FROM left JOIN right ON left.colour == right.colour
+    inner_join = left.inner_join(right, keys=['colour'], columns=['number', 'letter'])
+    inner_join.show()
 
-assert list(table7.filter('A', 'B', slice(4, 8))) == [(1, 10), (5, 10), (9, 10), (7, 10)]
+    # outer join
+    # SELECT number, letter FROM left OUTER JOIN right ON left.colour == right.colour
+    outer_join = left.outer_join(right, keys=['colour'], columns=['number', 'letter'])
+    outer_join.show()
 
-assert table7.is_sorted(**sort_order)
+    assert left_join != inner_join
+    assert inner_join != outer_join
+    assert left_join != outer_join
+
+
+def sortation_tests():  # Sortation
+
+    table7 = Table()
+    table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
+    table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
+    table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
+
+    assert not table7.is_sorted()
+
+    sort_order = {'B': False, 'C': False, 'A': False}
+
+    table7.sort(**sort_order)
+
+    assert list(table7.rows) == [
+        (4, 1, 0),
+        (8, 1, 0),
+        (3, 1, 1),
+        (6, 1, 1),
+        (1, 10, 0),
+        (5, 10, 0),
+        (9, 10, 0),
+        (7, 10, 1),
+        (None, 100, 1)
+    ]
+
+    assert list(table7.filter('A', 'B', slice(4, 8))) == [(1, 10), (5, 10), (9, 10), (7, 10)]
+
+    assert table7.is_sorted(**sort_order)
 
 
 class GroupbyFunction(object):
@@ -1669,44 +1691,73 @@ class GroupBy(object):
         return t
 
 
-g = GroupBy(keys=['a', 'b'],
-            functions=[('f', Max),
-                       ('f', Min),
-                       ('f', Sum),
-                       ('f', First),
-                       ('f', Last),
-                       ('f', Count),
-                       ('f', CountUnique),
-                       ('f', Average),
-                       ('f', StandardDeviation),
-                       ('a', StandardDeviation),
-                       ('f', Median),
-                       ('f', Mode),
-                       ('g', Median)])
-t2 = t + t
-assert len(t2) == 2 * len(t)
-t2.show()
+def groupby_tests():
+    t = Table()
+    for c in 'abcde':
+        t.add_column(header=c, datatype=int, allow_empty=False, data=[i for i in range(5)])
 
-g += t2
+    # we want to add two new columns using the functions:
+    def f1(a, b, c):
+        return a + b + c + 1
 
-assert list(g.rows) == [
-    (0, 0, 1, 1, 2, 1, 1, 2, 1, 1.0, 0.0, 0.0, 1, 1, 0),
-    (1, 1, 4, 4, 8, 4, 4, 2, 1, 4.0, 0.0, 0.0, 4, 4, 1),
-    (2, 2, 7, 7, 14, 7, 7, 2, 1, 7.0, 0.0, 0.0, 7, 7, 8),
-    (3, 3, 10, 10, 20, 10, 10, 2, 1, 10.0, 0.0, 0.0, 10, 10, 27),
-    (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
-]
+    def f2(b, c, d):
+        return b * c * d
 
-g.table.show()
+    # and we want to compute two new columns 'f' and 'g':
+    t.add_column(header='f', datatype=int, allow_empty=False)
+    t.add_column(header='g', datatype=int, allow_empty=True)
 
-g2 = GroupBy(keys=['a', 'b'], functions=[('f', Max), ('f', Sum)])
-g2 += t + t + t
+    # we can now use the filter, to iterate over the table:
+    for row in t.filter('a', 'b', 'c', 'd'):
+        a, b, c, d = row
 
-g2.table.show()
+        # ... and add the values to the two new columns
+        t['f'].append(f1(a, b, c))
+        t['g'].append(f2(b, c, d))
 
-pivot_table = g2.pivot(columns=['b'])
+    assert len(t) == 5
+    assert list(t.columns) == list('abcdefg')
+    t.show()
 
-pivot_table.show()
+
+    g = GroupBy(keys=['a', 'b'],
+                functions=[('f', Max),
+                           ('f', Min),
+                           ('f', Sum),
+                           ('f', First),
+                           ('f', Last),
+                           ('f', Count),
+                           ('f', CountUnique),
+                           ('f', Average),
+                           ('f', StandardDeviation),
+                           ('a', StandardDeviation),
+                           ('f', Median),
+                           ('f', Mode),
+                           ('g', Median)])
+    t2 = t + t
+    assert len(t2) == 2 * len(t)
+    t2.show()
+
+    g += t2
+
+    assert list(g.rows) == [
+        (0, 0, 1, 1, 2, 1, 1, 2, 1, 1.0, 0.0, 0.0, 1, 1, 0),
+        (1, 1, 4, 4, 8, 4, 4, 2, 1, 4.0, 0.0, 0.0, 4, 4, 1),
+        (2, 2, 7, 7, 14, 7, 7, 2, 1, 7.0, 0.0, 0.0, 7, 7, 8),
+        (3, 3, 10, 10, 20, 10, 10, 2, 1, 10.0, 0.0, 0.0, 10, 10, 27),
+        (4, 4, 13, 13, 26, 13, 13, 2, 1, 13.0, 0.0, 0.0, 13, 13, 64)
+    ]
+
+    g.table.show()
+
+    g2 = GroupBy(keys=['a', 'b'], functions=[('f', Max), ('f', Sum)])
+    g2 += t + t + t
+
+    g2.table.show()
+
+    pivot_table = g2.pivot(columns=['b'])
+
+    pivot_table.show()
 
 
 # reading and writing data.
@@ -1734,7 +1785,41 @@ def detect_encoding(path):
     raise UnicodeDecodeError
 
 
-def text_reader(path, split_sequence=None, sep=","):
+def detect_seperator(path, encoding):
+    """
+    :param path: pathlib.Path objects
+    :param encoding: file encoding.
+    :return: 1 character.
+
+    After reviewing the logic in the CSV sniffer, I concluded that all it
+    really does is to look for a non-text character. As the separator is
+    determined by the first line, which almost always is a line of headers,
+    the text characters will be utf-8,16 or ascii letters plus white space.
+    This leaves the characters ,;:| and \t as potential separators, with one
+    exception: files that use whitespace as separator. My logic is therefore
+    to (1) find the set of characters that intersect with ',;:|\t' which in
+    practice is a single character, unless (2) it is empty whereby it must
+    be whitespace.
+    """
+    text = ""
+    for line in path.open('r', encoding=encoding):  # pick the first line only.
+        text = line
+        break
+    seps = set(',\t;:|').intersection(text)
+    if not seps:
+        if " " in text:
+            return " "
+        else:
+            raise ValueError("separator not detected")
+    if len(seps) == 1:
+        return seps.pop()
+    else:
+        frq = [(text.count(i), i) for i in seps]
+        frq.sort(reverse=True)  # most frequent first.
+        return frq[0][-1]
+
+
+def text_reader(path, split_sequence=None, sep=None):
     """ txt, tab & csv reader """
     if not isinstance(path, Path):
         raise ValueError(f"expected pathlib.Path, got {type(path)}")
@@ -1743,8 +1828,10 @@ def text_reader(path, split_sequence=None, sep=","):
     windows = '\n'
     unix = '\r\n'
 
-    # detect encoding
-    encoding = detect_encoding(path)
+    encoding = detect_encoding(path)  # detect encoding
+
+    if split_sequence is None and sep is None:  #
+        sep = detect_seperator(path, encoding)
 
     t = Table()
     n_columns = None
@@ -1761,6 +1848,7 @@ def text_reader(path, split_sequence=None, sep=","):
                 values = tuple((i.lstrip().rstrip() for i in line.split(sep)))
 
             if not t.columns:
+
                 for v in values:
                     header = v.rstrip(" ").lstrip(" ")
                     t.add_column(header, datatype=str, allow_empty=True)
@@ -1769,7 +1857,7 @@ def text_reader(path, split_sequence=None, sep=","):
                 if n_columns - 1 == len(values):
                     values += ('', )
                 t.add_row(values)
-    return t
+    return [t]  # file-reader expects a list of tables.
 
 
 def text_escape(s, escape='"', sep=';'):
@@ -1803,32 +1891,33 @@ def text_escape(s, escape='"', sep=';'):
     return words
 
 
-te = text_escape('"t"')
-assert te == ("t",)
+def text_escape_tests():
+    te = text_escape('"t"')
+    assert te == ("t",)
 
-te = text_escape('"t";"3";"2"')
-assert te == ("t", "3", "2")
+    te = text_escape('"t";"3";"2"')
+    assert te == ("t", "3", "2")
 
-te = text_escape('"this";"123";234;"this";123;"234"')
-assert te == ('this', '123', '234', 'this', '123', '234')
+    te = text_escape('"this";"123";234;"this";123;"234"')
+    assert te == ('this', '123', '234', 'this', '123', '234')
 
-te = text_escape('"this";"123";"234"')
-assert te == ("this", "123", "234")
+    te = text_escape('"this";"123";"234"')
+    assert te == ("this", "123", "234")
 
-te = text_escape('"this";123;234')
-assert te == ("this", "123", "234")
+    te = text_escape('"this";123;234')
+    assert te == ("this", "123", "234")
 
-te = text_escape('"this";123;"234"')
-assert te == ("this", "123", "234")
+    te = text_escape('"this";123;"234"')
+    assert te == ("this", "123", "234")
 
-te = text_escape('123;"1\'3";234')
-assert te == ("123", "1'3", "234"), te
+    te = text_escape('123;"1\'3";234')
+    assert te == ("123", "1'3", "234"), te
 
-te = text_escape('"1000627";"MOC;Sportpouzdro;pás;krk;XL;černá";"2.080,000";"CM3";2')
-assert te == ("1000627", "MOC;Sportpouzdro;pás;krk;XL;černá", "2.080,000", "CM3", '2')
+    te = text_escape('"1000627";"MOC;Sportpouzdro;pás;krk;XL;černá";"2.080,000";"CM3";2')
+    assert te == ("1000627", "MOC;Sportpouzdro;pás;krk;XL;černá", "2.080,000", "CM3", '2')
 
-te = text_escape('"1000294";"S2417DG 24"" LED monitor (210-AJWM)";"47.120,000";"CM3";3')
-assert te == ('1000294', 'S2417DG 24"" LED monitor (210-AJWM)', '47.120,000', 'CM3', '3')
+    te = text_escape('"1000294";"S2417DG 24"" LED monitor (210-AJWM)";"47.120,000";"CM3";3')
+    assert te == ('1000294', 'S2417DG 24"" LED monitor (210-AJWM)', '47.120,000', 'CM3', '3')
 
 
 def excel_reader(path):
@@ -1902,31 +1991,39 @@ def find_format(table):
 def file_reader(path, **kwargs):
     assert isinstance(path, Path)
     readers = {
-        'csv': [text_reader, {'sep': ","}],
-        'ssv': [text_reader, {'sep': ";"}],
+        'csv': [text_reader, {}],
         'tsv': [text_reader, {'sep': "\t"}],
-        'txt': [text_reader, {'sep': "\t"}],
-        'tab': [text_reader, {'sep': '\t'}],
+        'txt': [text_reader, {}],
         'xls': [],
-        'xlsx': [],
+        'xlsx': [excel_reader, {}],
         'xlsm': [],
         'excelsheet': [],
         'zip': [],
-        'log': [log_reader, {'sep': None}]
+        'log': [log_reader, {'sep': False}]
     }
 
     extension = path.name.split(".")[-1]
     reader, default_kwargs = readers[extension]
     kwargs = {**default_kwargs, **kwargs}
 
-    table = reader(path, **kwargs)
-    find_format(table)
-    return table
+    tables = reader(path, **kwargs)
+    assert isinstance(tables, list), "programmer forgot to return a list of tables."
+    for table in tables:
+        find_format(table)
+    return tables
 
 
 # file reader tests.
+#---------------------
 
-def test_00():
+def text_reader_test_00():
+    table7 = Table()
+    table7.add_column('A', int, data=[1, None, 8, 3, 4, 6, 5, 7, 9], allow_empty=True)
+    table7.add_column('B', int, data=[10, 100, 1, 1, 1, 1, 10, 10, 10])
+    table7.add_column('C', int, data=[0, 1, 0, 1, 0, 1, 0, 1, 0])
+    sort_order = {'B': False, 'C': False, 'A': False}
+    table7.sort(**sort_order)
+
     headers = ", ".join([c for c in table7.columns])
     data = [headers]
     for row in table7.rows:
@@ -1936,7 +2033,7 @@ def test_00():
     s = "\n".join(data)
     print(s)
     csv_file.write_text(s)  # write
-    tr_table = file_reader(csv_file)  # read
+    tr_table = file_reader(csv_file)[0]  # read
     csv_file.unlink()  # cleanup
 
     tr_table.show()
@@ -1944,10 +2041,8 @@ def test_00():
 
     assert tr_table == table7
 
-test_00()
 
-
-def test_01():
+def text_reader_test_01():
     amcap_test_data = Table()
     for int_type in ['sku', 'quantity', "ti", "hi"]:
         amcap_test_data.add_column(int_type, int)
@@ -1960,15 +2055,13 @@ def test_01():
 
     path = Path(__file__).parent / "files" / 'amcap_test_data.csv'
     assert path.exists()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     table.show()
     assert table.compare(amcap_test_data), table.compare(amcap_test_data)
     assert len(table) == 5
 
-test_01()
 
-
-def test_02():
+def text_reader_test_02():
     book1_csv = Table()
     book1_csv.add_column('a', int)
     for float_type in list('bcdef'):
@@ -1976,16 +2069,13 @@ def test_02():
 
     path = Path(__file__).parent / "files" / 'book1.csv'
     assert path.exists()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     table.show(slice(0,10))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 45
 
 
-test_02()
-
-
-def test_03():
+def text_reader_test_03():
     book1_csv = Table()
     book1_csv.add_column('a', int)
     for float_type in list('bcdef'):
@@ -1993,15 +2083,13 @@ def test_03():
 
     path = Path(__file__).parent / "files" / 'book1.txt'
     assert path.exists()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     table.show(slice(0,10))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 45
 
-test_03()
 
-
-def test_04():
+def text_reader_test_04():
     book1_csv = Table()
     headers = "TestCase,Numerat.,Denom.,Volume,Gross weight,pcs per outer,L (carton),W (carton),H (carton),Effective Casepack per layer (Ti),Effective pcs per layer,Hi (1.20m) CHEP,Hi (2.00m) CHEP,Hi (1.80m) 1-WAY,Effective pieces per 1.275m pallet,Packed pallet height,Total Netto weight,Total Netto Volume,Waste%A"
     headers = headers.split(",")
@@ -2011,16 +2099,13 @@ def test_04():
 
     path = Path(__file__).parent / "files" / 'box_packer_test_data.csv'
     assert path.exists()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     table.show(slice(0, 10))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 5856, len(table)
 
 
-test_04()
-
-
-def test_05():
+def text_reader_test_05():
     book1_csv = Table()
     headers = "Date,OrderId,Customer,SKU,Qty"
     headers = headers.split(",")
@@ -2031,17 +2116,14 @@ def test_05():
 
     path = Path(__file__).parent / "files" / 'empty_column_values.csv'
     assert path.exists()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     table.show(slice(0, 10))
     table.show(slice(-15))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 53, len(table)
 
 
-test_05()
-
-
-def test_06():
+def text_reader_test_06():
     book1_csv = Table()
     book1_csv.add_column('Item', int)
     book1_csv.add_column('Materiál', str)
@@ -2051,17 +2133,14 @@ def test_06():
 
     path = Path(__file__).parent / "files" / 'encoding_utf8_test.csv'
     assert path.exists()
-    table = file_reader(path, sep=';')
+    table = file_reader(path, sep=';')[0]
     table.show(slice(0, 10))
     table.show(slice(-15))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 99, len(table)
 
 
-test_06()
-
-
-def test_07():
+def text_reader_test_07():
     book1_csv = Table()
     book1_csv.add_column('Item', int)
     book1_csv.add_column('Materiál', str)
@@ -2071,17 +2150,14 @@ def test_07():
 
     path = Path(__file__).parent / "files" / 'encoding_windows1250_test.csv'
     assert path.exists()
-    table = file_reader(path, sep=';')
+    table = file_reader(path, sep=';')[0]
     table.show(slice(0, 10))
     table.show(slice(-15))
     assert table.compare(book1_csv), table.compare(book1_csv)
     assert len(table) == 99, len(table)
 
 
-test_07()
-
-
-def test_08():
+def text_reader_test_08():
     table_source = Table()
     table_source.add_column('prod_slbl', int)
     table_source.add_column('sale_date', datetime)
@@ -2102,16 +2178,14 @@ def test_08():
     path = Path(__file__).parent / "files" / 'frito.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
     assert table.compare(table_source)
     assert len(table) == 9999, len(table)
 
 
-test_08()
-
-def test_09():
+def text_reader_test_09():
     large_skus = Table()
     large_skus.add_column('LadeGrp', int, False)
     large_skus.add_column('Einkaufsgruppe (Purchase Group)', int, False)
@@ -2133,7 +2207,7 @@ def test_09():
     path = Path(__file__).parent / "files" / 'large_skus.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
     print( "{:,} fields/seccond".format(round((len(table)*len(table.columns)) / ((end - start) / 10e9),0)) )
@@ -2141,10 +2215,7 @@ def test_09():
     assert len(table) == 45745, len(table)
 
 
-test_09()
-
-
-def test_10():
+def text_reader_test_10():
     messy_orderlines = Table()
     messy_orderlines.add_column('Date', date, False)
     messy_orderlines.add_column('OrderId', int, False)
@@ -2155,7 +2226,7 @@ def test_10():
     path = Path(__file__).parent / "files" / 'messy_orderlines.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
 
@@ -2164,11 +2235,7 @@ def test_10():
     assert len(table) == 1997, len(table)
 
 
-test_10()
-
-
-
-def test_11():
+def text_reader_test_11():
     messy_skus = Table()
     messy_skus.add_column('SKU', int, True)
     messy_skus.add_column('Length', str, True)  # there's a minus in one field.
@@ -2178,7 +2245,7 @@ def test_11():
     path = Path(__file__).parent / "files" / 'messy_skus.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
 
@@ -2187,10 +2254,7 @@ def test_11():
     assert len(table) == 1358, len(table)
 
 
-test_11()
-
-
-def test12():
+def text_reader_test_12():
     old = Table()  # date,orderid,customerid,sku,quantity
     old.add_column('date', datetime, False)
     old.add_column('orderid', int, False)
@@ -2201,7 +2265,7 @@ def test12():
     path = Path(__file__).parent / "files" / 'orderline_data_to_forecast.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
 
@@ -2209,10 +2273,8 @@ def test12():
     assert table.compare(old)
     assert len(table) == 11324, len(table)
 
-test12()
 
-
-def test_13():
+def text_reader_test_13():
     messy_orderlines = Table()
     messy_orderlines.add_column('Date', date, False)
     messy_orderlines.add_column('OrderId', int, False)
@@ -2223,7 +2285,7 @@ def test_13():
     path = Path(__file__).parent / "files" / 'orderlines.csv'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path)
+    table = file_reader(path)[0]
     end = process_time_ns()
     table.show(slice(5))
 
@@ -2232,10 +2294,7 @@ def test_13():
     assert len(table) == 1997, len(table)
 
 
-test_13()
-
-
-def test_14():
+def text_reader_test_14():
     header = "    | Delivery |  Item|Pl.GI date|Route |SC|Ship-to   |SOrg.|Delivery quantity|SU| TO Number|Material    |Dest.act.qty.|BUn|Typ|Source Bin|Cty"
     split_sequence = ["|"] * header.count('|')
     sap_sample = Table()
@@ -2260,7 +2319,7 @@ def test_14():
     path = Path(__file__).parent / "files" / 'sap_sample.txt'
     assert path.exists()
     start = process_time_ns()
-    table = file_reader(path, split_sequence=split_sequence)
+    table = file_reader(path, split_sequence=split_sequence)[0]
     end = process_time_ns()
     table.show(slice(5))
 
@@ -2268,6 +2327,58 @@ def test_14():
     assert table.compare(sap_sample)
     assert len(table) == 20, len(table)
 
-test_14()
 
+def excel_reader_test_01():
+    sheet1 = Table()
+    sheet1.add_column('a', int)
+    for float_type in list('bcdef'):
+        sheet1.add_column(float_type, float)
+
+    sheet2 = Table()
+
+    books = [sheet1, sheet2]
+
+    path = Path(__file__).parent / "files" / 'book1.xlsx'
+    assert path.exists()
+    start = process_time_ns()
+    tables = file_reader(path)
+    end = process_time_ns()
+
+    fields = sum(len(t)*len(t.columns) for t in tables)
+    print("{:,} fields/seccond".format(round(fields / (max(1, end - start) / 10e9), 0)))
+
+    for book, table in zip(books,tables):
+        table.show(slice(5))
+
+
+        assert table.compare(book)
+        assert len(table) == 20, len(table)
+
+
+
+# all tests
+# ---------
+# basic_column_tests()
+# basic_table_tests()
+# lookup_tests()
+# sql_join_tests()
+# sortation_tests()
+# groupby_tests()
+# text_escape_tests()
+# text_reader_test_00()
+# text_reader_test_01()
+# text_reader_test_02()
+# text_reader_test_03()
+# text_reader_test_04()
+# text_reader_test_05()
+# text_reader_test_06()
+# text_reader_test_07()
+# text_reader_test_08()
+# text_reader_test_09()
+# text_reader_test_10()
+# text_reader_test_11()
+# text_reader_test_12()
+# text_reader_test_13()
+# text_reader_test_14()
+excel_reader_test_01()
 
