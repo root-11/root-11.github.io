@@ -170,8 +170,12 @@ class DataTypes(object):
 
     @staticmethod
     def from_json(v, dtype):
+
         if v in DataTypes.nones:
-            return None
+            if dtype is str and v == "":
+                return ""
+            else:
+                return None
         if dtype is int:
             return int(v)
         elif dtype is str:
@@ -680,9 +684,8 @@ class Table(object):
         return self.__copy__()
 
     def to_json(self):
-        # return json.dumps([c.to_json() for c in self.columns.values()])
         return json.dumps({
-            'metadata' : self.metadata,
+            'metadata': self.metadata,
             'columns': [c.to_json() for c in self.columns.values()]
         })
 
@@ -695,7 +698,6 @@ class Table(object):
             col = Column.from_json(c)
             col.header = t.check_for_duplicate_header(col.header)
             t.columns[col.header] = col
-            t.__setattr__(col.header, col)
         return t
 
     def check_for_duplicate_header(self, header):
@@ -704,7 +706,7 @@ class Table(object):
             header = 'None'
         new_header = header
         counter = count(start=1)
-        while hasattr(self, new_header):
+        while new_header in self.columns:
             new_header = f"{header}_{next(counter)}"  # valid attr names must be ascii.
         return new_header
 
@@ -974,11 +976,13 @@ class Table(object):
 
     def _join_type_check(self, other, keys, columns):
         if not isinstance(other, Table):
-            raise TypeError(f"Expected other to be type Table, not {type(other)}")
-        if not isinstance(keys, list) and all(isinstance(k,str) for k in keys):
+            raise TypeError(f"other expected other to be type Table, not {type(other)}")
+        if not isinstance(keys, list) and all(isinstance(k, str) for k in keys):
             raise TypeError(f"Expected keys as list of strings, not {type(keys)}")
+        union = list(self.columns) + list(other.columns)
         if not all(k in self.columns and k in other.columns for k in keys):
-            union = list(self.columns) + list(other.columns)
+            raise ValueError(f"key(s) not found: {[k for k in keys if k not in union]}")
+        if not all(k in union for k in columns):
             raise ValueError(f"column(s) not found: {[k for k in keys if k not in union]}")
 
     def left_join(self, other, keys, columns):
@@ -1226,7 +1230,6 @@ def basic_table_tests():
     assert list(t.columns) == list('abcdefg')
     t.show()
 
-
     # slicing is easy:
     table_chunk = table2[2:4]
     assert isinstance(table_chunk, Table)
@@ -1263,15 +1266,15 @@ def basic_table_tests():
     except TypeError as error:
         print("The error is:", str(error))
 
-
     # works with all datatypes:
     now = datetime.now()
 
     table4 = Table()
-    table4.add_column('A', int, False, data=[-1, 1])
-    table4.add_column('A', int, True, data=[None, 1])  # None!
+    table4.add_column('A', int, allow_empty=False, data=[-1, 1])
+    table4.add_column('A', int, allow_empty=True, data=[None, 1])  # None!
     table4.add_column('A', float, False, data=[-1.1, 1.1])
-    table4.add_column('A', str, False, data=["", "1"])
+    table4.add_column('A', str, False, data=["", "1"])  # Empty string is not a None, when dtype is str!
+    table4.add_column('A', str, True, data=[None, "1"])  # Empty string is not a None, when dtype is str!
     table4.add_column('A', bool, False, data=[False, True])
     table4.add_column('A', datetime, False, data=[now, now])
     table4.add_column('A', date, False, data=[now.date(), now.date()])
@@ -1292,6 +1295,7 @@ def basic_table_tests():
     table5_json = table5.to_json()
     table5_from_json = Table.from_json(table5_json)
     assert table5 == table5_from_json
+
 
 def lookup_tests():  # doing lookups is supported by indexing:
     table6 = Table()
@@ -2509,8 +2513,9 @@ def excel_reader_test_04():
     table = file_reader(path)[0]
     assert isinstance(table, Table)
     show = table[slice(0, 5)]
-    show += table[slice(7000,7005)]
+    show += table[slice(7000, 7005)]
     show += table[slice(-5)]
+    assert len(show) == 15
     show.show()  # This is why it's called dirty data:
 
     sheet1 = Table(filename=path.name, sheet_name='Tue')
@@ -2522,7 +2527,7 @@ def excel_reader_test_04():
 
     assert set(table['Transaction Date']) == {'43683.0', '2019-8-6'}
     assert len([i for i in table['Transaction Time'] if ":" in i]) == 17213
-    assert len([i for i in table['Transaction Time'] if ":" not in i]) ==7268
+    assert len([i for i in table['Transaction Time'] if ":" not in i]) == 7268
 
 
 # all tests
