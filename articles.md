@@ -3,7 +3,7 @@ This is my personal website, where you can find code and solutions to problems I
 date | article 
 ---|---
 2020-06-05:| [Notes on optimisation strategies](content/notes-on-optimisation-strategies/index.html)
-2020-05-31:| [Graph-theory - a reference imlementation](content/graph-theory/index.html)
+2020-05-31:| [Graph-theory - a reference implementation](content/graph-theory/index.html)
 2020-05-28:| [Problem structure keywords and content (or how to solve any problem)](content/problem-structure-keywords-content/index.html)
 2020-05-23:| [Calculating the convex hull](content/calculating-the-convex-hull/index.html)
 2020-05-19:| [Rounding datetime, dates and times](content/rounding-dates-and-times/index.html)
