@@ -39,7 +39,7 @@ a `volatile environment`.
 
 Such algorithms are characterised by:
  
-- The have state 
+- They have state 
 - They co-evolve with changes. The don't "reset"
 - They have a minimal response time and take the initial conditions from 
 the previous state. If the algorithms manage to find a better solution in the time
