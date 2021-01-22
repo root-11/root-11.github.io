@@ -18,28 +18,38 @@
     <br><br>
     <div style="margin-bottom: 3ch;text-transform: none;"></div>
 
-<div style="margin-bottom: 3ch;text-transform: none;">2021-01-15</div><div class="heading">is_numpy_really_faster</div><hr/>    
+<div style="margin-bottom: 3ch;text-transform: none;">2021-01-22</div><div class="heading">is_numpy_really_faster</div><hr/>    
 <p>I have a simple snippet of code:</p>
-<p>```python</p>
-<p>import numpy as np</p>
-<p>v1 = [1, 2, 3]
-v2 = [2.4, 3, -1]</p>
-<p>def f1(v1, v2):  # &lt;--- Using numpy.cross
-    return list(np.cross(v1, v2))  </p>
-<p>def f2(v1, v2):  # &lt;---- Using python
+<pre><code>import numpy as np
+
+v1 = [1, 2, 3]
+v2 = [2.4, 3, -1]
+
+
+def f1(v1, v2):  # &lt;--- Using numpy.cross
+    return list(np.cross(v1, v2))
+
+
+def f2(v1, v2):  # &lt;---- Using python
     a1, a2, a3 = v1
     b1, b2, b3 = v2
-    return [a2 * b3 - a3 * b2, -(a1 * b3 - a3 * b1), a1 * b2 - a2 * b1]</p>
-<p>def x1():<br />
+    return [a2 * b3 - a3 * b2, -(a1 * b3 - a3 * b1), a1 * b2 - a2 * b1]
+
+
+def x1():  
     for i in range(100000):
-        v3 = f1(v1, v2)  # repeated calls for profiling usage of numpy</p>
-<p>def x2():
+        v3 = f1(v1, v2)  # repeated calls for profiling usage of numpy
+
+
+def x2():
     for i in range(100000):
-        v4 = f2(v1, v2)  # # repeated calls for profiling usage of python.</p>
-<p>if <strong>name</strong> == "<strong>main</strong>":
+        v4 = f2(v1, v2)  # # repeated calls for profiling usage of python.
+
+
+if __name__ == "__main__":
     x1()
-    x2()</p>
-<p>```</p>
+    x2()
+</code></pre>
 <p>By running <a href="example.py">example.py</a> with profile the easy way:</p>
 <p><img alt="pycharm progile" src="run_with_pycharm.png" /></p>
 <p>the time spent is presented as follows</p>
