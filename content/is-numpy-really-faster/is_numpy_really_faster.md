@@ -81,6 +81,10 @@ the time spent is presented as follows
 |_new_module|95|0|0|
 |__init__|119|0|0|
 
+
+------
+
+
 The answer to the question "Is numpy really faster?" then becomes "it depends on the usage", 
 and on this particular occasion it depends on how much numerical computing you're actaully 
 doing as the overhead of leaving python to call numpy is far in excess to doing the 
