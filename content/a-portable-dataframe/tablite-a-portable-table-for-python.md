@@ -66,6 +66,6 @@ data at 4 million rows per second, but then spend all day on making the data fit
 into the framework.
    
 For more details go to: [tablite](https://pypi.org/project/tablite) 
-[![Build Status](https://travis-ci.org/root-11/tablite.svg?branch=master)](https://travis-ci.org/root-11/tablite) 
+[![Build Status](https://travis-ci.com/root-11/tablite.svg?branch=master)](https://travis-ci.org/root-11/tablite) 
 [![Code coverage](https://codecov.io/gh/root-11/tablite/branch/master/graph/badge.svg)](https://codecov.io/gh/root-11/tablite)
 

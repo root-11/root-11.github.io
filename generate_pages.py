@@ -4,6 +4,7 @@ from markdown import markdown
 
 root = Path(__file__).parent
 content = root / 'content'
+drafts = root / 'drafts'
 
 dont_index = ['about', 'contact']
 
@@ -46,10 +47,12 @@ def markdown_to_html(text, title, root="../../"):
 def main():
     assert content.exists()
     assert content.is_dir()
+    assert drafts.exists()
+    assert drafts.is_dir()
 
     # discover files.
     files = []
-    queue = [content]
+    queue = [content, drafts]
     while queue:
         target = queue.pop(0)
         assert target.is_dir()
@@ -92,6 +95,7 @@ def remove_table_head(html):
     end_of_tag = html.find(">", end)
     html_after = html[:start] + html[end_of_tag+1:]
     return html_after
+
 
 if __name__ == "__main__":
     main()
