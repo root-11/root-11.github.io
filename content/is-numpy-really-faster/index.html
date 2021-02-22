@@ -18,7 +18,7 @@
     <br><br>
     <div style="margin-bottom: 3ch;text-transform: none;"></div>
 
-<div style="margin-bottom: 3ch;text-transform: none;">2021-02-10</div><div class="heading">is numpy really faster</div><hr/>    
+<div style="margin-bottom: 3ch;text-transform: none;">2021-02-22</div><div class="heading">is numpy really faster</div><hr/>    
 <p>I have a simple snippet of code:</p>
 <pre><code>import numpy as np
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 </code></pre>
 <p>By running <a href="example.py">example.py</a> with profile the easy way:</p>
 <p><img alt="pycharm progile" src="run_with_pycharm.png" /></p>
-<p>the time spent is presented as follows</p>
+<p>the time spent is presented as follows:</p>
 <table>
 <thead>
 <tr>
@@ -294,7 +294,8 @@ if __name__ == "__main__":
 </tbody>
 </table>
 <hr />
-<p>The answer to the question "Is numpy really faster?" then becomes "it depends on the usage", 
+<p><code>f1</code> - the numpy function claims 6169ms in contrast to 35ms for <code>f2</code> the pure python function. </p>
+<p>So the answer to the question "Is numpy really faster?" then becomes "it depends on the usage", 
 and on this particular occasion it depends on how much numerical computing you're actaully 
 doing as the overhead of leaving python to call numpy is far in excess to doing the 
 calculation purely in python.</p>

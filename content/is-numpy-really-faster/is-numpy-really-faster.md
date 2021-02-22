@@ -38,7 +38,7 @@ By running [example.py](example.py) with profile the easy way:
 
 ![pycharm progile](run_with_pycharm.png)
 
-the time spent is presented as follows
+the time spent is presented as follows:
 
 |name|call count| time | own time |
 |---|---:|---:|---:|
@@ -85,7 +85,9 @@ the time spent is presented as follows
 ------
 
 
-The answer to the question "Is numpy really faster?" then becomes "it depends on the usage", 
+`f1` - the numpy function claims 6169ms in contrast to 35ms for `f2` the pure python function. 
+
+So the answer to the question "Is numpy really faster?" then becomes "it depends on the usage", 
 and on this particular occasion it depends on how much numerical computing you're actaully 
 doing as the overhead of leaving python to call numpy is far in excess to doing the 
 calculation purely in python.
