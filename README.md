@@ -5,6 +5,7 @@ Use what you find useful. Ignore the rest.
 
 |date|article|
 |:---|:---|
+|2021-09-21|[rounding to nearest n](content/round_to_nearest_n.ipynb)|
 |2021-09-05|[solving probability problems with python](content/probabilities_with_python.ipynb)|
 |2021-04-12|[stock cutting problem](content/stock_cutting.ipynb)|
 |2021-01-22|[integer ratios](content/integer_ratios.ipynb)|
