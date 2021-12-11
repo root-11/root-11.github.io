@@ -14,6 +14,7 @@ Github will render the notebooks for you.
 | 2021-09-30 | [solving equations with PuLP](content/solving_equations_with_pulp.ipynb)                                                 |
 | 2021-09-21 | [rounding to nearest n](content/round_to_nearest_n.ipynb)                                                                |
 | 2021-09-05 | [solving probability problems with python](content/probabilities_with_python.ipynb)                                      |
+| 2021-06-14 | [how many digits do you need?](content/how_many_digits_do_you_need.ipynb)                                                |
 | 2021-04-12 | [stock cutting problem](content/stock_cutting.ipynb)                                                                     |
 | 2021-01-22 | [integer ratios](content/integer_ratios.ipynb)                                                                           |
 | 2021-01-15 | [Is numpy really faster?](content/is_numpy_always_faster.ipynb)                                                          |
