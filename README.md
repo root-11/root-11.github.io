@@ -9,6 +9,7 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2021-12-13 | [starting a small python trick collection](content/python_neat_trick_collection.ipynb)                                   |
 | 2021-12-11 | [replace substrings without corrupting strings that contain the substring](content/replace_text.ipynb)                   |
 | 2021-10-04 | [problems reading text as tables](content/problems_with_csv.ipynb)                                                       |
 | 2021-09-30 | [solving equations with PuLP](content/solving_equations_with_pulp.ipynb)                                                 |
