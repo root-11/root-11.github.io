@@ -9,15 +9,16 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
-| 2021-12-13 | [starting a small python trick collection](content/python_neat_trick_collection.ipynb)                                   |
-| 2021-12-11 | [replace substrings without corrupting strings that contain the substring](content/replace_text.ipynb)                   |
-| 2021-10-04 | [problems reading text as tables](content/problems_with_csv.ipynb)                                                       |
-| 2021-09-30 | [solving equations with PuLP](content/solving_equations_with_pulp.ipynb)                                                 |
-| 2021-09-21 | [rounding to nearest n](content/round_to_nearest_n.ipynb)                                                                |
-| 2021-09-05 | [solving probability problems with python](content/probabilities_with_python.ipynb)                                      |
-| 2021-06-14 | [how many digits do you need?](content/how_many_digits_do_you_need.ipynb)                                                |
-| 2021-04-12 | [stock cutting problem](content/stock_cutting.ipynb)                                                                     |
-| 2021-01-22 | [integer ratios](content/integer_ratios.ipynb)                                                                           |
+| 2021-12-19 | [Fastest method to prove assignment problem cannot be solved?](content/assignment_problem_not_solvable.ipynb)            |
+| 2021-12-13 | [Starting a small python trick collection](content/python_neat_trick_collection.ipynb)                                   |
+| 2021-12-11 | [Replace substrings without corrupting strings that contain the substring](content/replace_text.ipynb)                   |
+| 2021-10-04 | [Problems reading text as tables](content/problems_with_csv.ipynb)                                                       |
+| 2021-09-30 | [Solving equations with PuLP](content/solving_equations_with_pulp.ipynb)                                                 |
+| 2021-09-21 | [Rounding to nearest n](content/round_to_nearest_n.ipynb)                                                                |
+| 2021-09-05 | [Solving probability problems with python](content/probabilities_with_python.ipynb)                                      |
+| 2021-06-14 | [How many digits do you need?](content/how_many_digits_do_you_need.ipynb)                                                |
+| 2021-04-12 | [Stock cutting problem](content/stock_cutting.ipynb)                                                                     |
+| 2021-01-22 | [Integer ratios](content/integer_ratios.ipynb)                                                                           |
 | 2021-01-15 | [Is numpy really faster?](content/is_numpy_always_faster.ipynb)                                                          |
 | 2020-06-27 | [Tablite - a dirty data tool](content/tablite.ipynb)                                                                     |
 | 2020-06-05 | [Notes on optimisation strategies](content/notes_on_optimization_strategies.ipynb)                                       |
@@ -29,7 +30,7 @@ Github will render the notebooks for you.
 | 2020-05-17 | [Solving traveling salesmans problem with genetic algorithm](content/tsp_w_ga.ipynb)                                     |
 | 2020-05-14 | [Graceful interrupt in batch jobs using pythons yield](content/graceful_interrupt_using_yield.ipynb)                     |
 | 2020-05-11 | [Brute force solution to the knapsack problem](content/brute_force_knapsack.ipynb)                                       |
-| 2020-05-07 | [automatic test generation](content/automatic_test_generation.ipynb)                                                     |
+| 2020-05-07 | [Automatic test generation](content/automatic_test_generation.ipynb)                                                     |
 | 2020-05-06 | [Maslite](content/maslite.ipynb)                                                                                         |
 
 
