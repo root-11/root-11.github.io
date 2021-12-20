@@ -7,6 +7,7 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2021-12-20 | [Using graps to compare sequences as permutations?](content/testing_permutations.ipynb)                                  |
 | 2021-12-19 | [Fastest method to prove assignment problem cannot be solved?](content/assignment_problem_not_solvable.ipynb)            |
 | 2021-12-13 | [Starting a small python trick collection](content/python_neat_trick_collection.ipynb)                                   |
 | 2021-12-11 | [Replace substrings without corrupting strings that contain the substring](content/replace_text.ipynb)                   |
