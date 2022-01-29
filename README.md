@@ -33,5 +33,7 @@ Github will render the notebooks for you.
 | 2020-05-11 | [Brute force solution to the knapsack problem](content/brute_force_knapsack.ipynb)                                       |
 | 2020-05-07 | [Automatic test generation](content/automatic_test_generation.ipynb)                                                     |
 | 2020-05-06 | [Maslite](content/maslite.ipynb)                                                                                         |
+| 2020-05-05 | [Monty Hall simulation](content/monty_hall_simulation.ipynb)                                                             |
+| 2020-05-04 | [Jupyter notebook notes on probabilities](content/notes_on_probabilities.ipynb)                                          |
 
 
