@@ -7,6 +7,7 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-01-29 | [In memory ZIP folder](content/in_memory_zip.ipynb)                                                                      |
 | 2022-01-08 | [Combinations of lists (or how `product` works)](content/combinations.ipynb)                                             |
 | 2021-12-20 | [How to test for permutations?](content/testing_permutations.ipynb)                                                      |
 | 2021-12-19 | [Fastest method to prove assignment problem cannot be solved?](content/assignment_problem_not_solvable.ipynb)            |
