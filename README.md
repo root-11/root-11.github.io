@@ -7,6 +7,7 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-02-13 | [Friday dinner notes about wordle](content/autowordle.ipynb)                                                             |
 | 2022-02-05 | [A short into to h5py and HDF5](content/healthy_intro_to_hdf5.ipynb)                                                     |
 | 2022-01-29 | [In memory ZIP folder](content/in_memory_zip.ipynb)                                                                      |
 | 2022-01-08 | [Combinations of lists (or how `product` works)](content/combinations.ipynb)                                             |
