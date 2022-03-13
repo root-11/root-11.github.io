@@ -4,6 +4,8 @@ This is my personal webpage. _Use what you find useful. Ignore the rest._
 Best viewed on [Github](https://github.com/root-11/root-11.github.io) as there are many notebooks.
 Github will render the notebooks for you.
 
+Got a question? Just raise an issue.
+
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
