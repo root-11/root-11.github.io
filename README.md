@@ -7,6 +7,7 @@ Github will render the notebooks for you.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-03-13 | [Multiprocessing with shared memory](content/multiprocessing_w_shared_memory.ipynb)                                                             |
 | 2022-02-13 | [Friday dinner notes about wordle](content/autowordle.ipynb)                                                             |
 | 2022-02-05 | [A short intro to h5py and HDF5](content/short_intro_to_hdf5.ipynb)                                                      |
 | 2022-01-29 | [In memory ZIP folder](content/in_memory_zip.ipynb)                                                                      |
