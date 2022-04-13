@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-04-13 | [Multiprocessing with shared memory - part 2](content/multiprocessing_w_shared_memory2.ipynb)                            |
 | 2022-03-14 | [Detecting the intersection of range objects](content/comparing_ranges.ipynb)                                            |
 | 2022-03-13 | [Multiprocessing with shared memory](content/multiprocessing_w_shared_memory.ipynb)                                      |
 | 2022-02-13 | [Friday dinner notes about wordle](content/autowordle.ipynb)                                                             |
