@@ -9,7 +9,8 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
-| 2022-04-30 | [`del`, `__del__` and garbage collection](content/del_and_gc.ipynb)                            |
+| 2022-04-30 | [measuring speed to disk](content/measuring_write_out_speed.ipynb)                                                      |
+| 2022-04-30 | [`del`, `__del__` and garbage collection](content/del_and_gc.ipynb)                                                      |
 | 2022-04-13 | [Multiprocessing with shared memory - part 2](content/multiprocessing_w_shared_memory2.ipynb)                            |
 | 2022-03-14 | [Detecting the intersection of range objects](content/comparing_ranges.ipynb)                                            |
 | 2022-03-13 | [Multiprocessing with shared memory](content/multiprocessing_w_shared_memory.ipynb)                                      |
@@ -43,5 +44,4 @@ Got a question? Just raise an issue.
 | 2020-05-06 | [Maslite](content/maslite.ipynb)                                                                                         |
 | 2020-05-05 | [Monty Hall simulation](content/monty_hall_simulation.ipynb)                                                             |
 | 2020-05-04 | [Jupyter notebook notes on probabilities](content/notes_on_probabilities.ipynb)                                          |
-
 
