@@ -1,0 +1,11 @@
+{
+    "python.defaultInterpreterPath": "C:/Data/venv/pages310/Scripts/python.exe",
+    "python.testing.pytestArgs": [
+        "tests",
+        "-sv"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+
+    
+}
