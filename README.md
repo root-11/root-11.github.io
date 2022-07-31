@@ -9,7 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
-| 2022-04-30 | [measuring speed to disk](content/measuring_write_out_speed.ipynb)                                                      |
+| 2022-07-19 | [measuring speed to disk](content/measuring_write_out_speed.ipynb)                                                      |
 | 2022-04-30 | [`del`, `__del__` and garbage collection](content/del_and_gc.ipynb)                                                      |
 | 2022-04-13 | [Multiprocessing with shared memory - part 2](content/multiprocessing_w_shared_memory2.ipynb)                            |
 | 2022-03-14 | [Detecting the intersection of range objects](content/comparing_ranges.ipynb)                                            |
