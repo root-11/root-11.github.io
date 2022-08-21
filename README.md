@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-08-21 | [Comparing syntax of pandas vs tablite](content/readability_matters_pandas_vs_tablite.ipynb)                             |
 | 2022-08-18 | [rounding the better way 2.0 (rounding numbers and dates)](content/rounding_the_better_way.ipynb)                        |
 | 2022-07-19 | [measuring speed to disk](content/measuring_write_out_speed.ipynb)                                                       |
 | 2022-04-30 | [`del`, `__del__` and garbage collection](content/del_and_gc.ipynb)                                                      |
