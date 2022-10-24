@@ -9,7 +9,8 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
-| 2022-09-17 | [Business calendar - when is the business open?](content/business_calendar.ipynb)                                        |
+| 2022-10-24 | [Writing documentation with JupyterBook - Easy!](content/writing_documentation.ipynb)                                    |
+| 2022-09-21 | [Business calendar - when is the business open?](content/business_calendar.ipynb)                                        |
 | 2022-09-17 | [Matrices as Graphs - some notes](content/matrices_as_graphs.ipynb)                                                      |
 | 2022-08-21 | [Comparing syntax of pandas vs tablite](content/readability_matters_pandas_vs_tablite.ipynb)                             |
 | 2022-08-18 | [rounding the better way 2.0 (rounding numbers and dates)](content/rounding_the_better_way.ipynb)                        |
