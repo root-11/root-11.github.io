@@ -9,7 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
-| 2022-10-24 | [An effective priority jobqueue using `insort` and `deque`](content/effective_job_queue.ipynb)                           |
+| 2022-10-30 | [An effective priority jobqueue using `insort` and `deque`](content/effective_job_queue.ipynb)                           |
 | 2022-10-24 | [Writing documentation with JupyterBook - Easy!](content/writing_documentation.ipynb)                                    |
 | 2022-09-21 | [Business calendar - when is the business open?](content/business_calendar.ipynb)                                        |
 | 2022-09-17 | [Matrices as Graphs - some notes](content/matrices_as_graphs.ipynb)                                                      |
