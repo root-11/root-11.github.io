@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 |:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| 2022-11-08 | [Calling nim from python](content/calling_nim_from_python.ipynb)                                                         |
 | 2022-10-30 | [An effective priority jobqueue using `insort` and `deque`](content/effective_job_queue.ipynb)                           |
 | 2022-10-24 | [Writing documentation with JupyterBook - Easy!](content/writing_documentation.ipynb)                                    |
 | 2022-09-21 | [Business calendar - when is the business open?](content/business_calendar.ipynb)                                        |
