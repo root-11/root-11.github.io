@@ -8,7 +8,7 @@ Got a question? Just raise an issue.
 
 
 | date       | article                                                                                                                  |
-|:-----------|:-------------------------------------------------------------------------------------------------------------------------|
+| :--------- | :----------------------------------------------------------------------------------------------------------------------- |
 | 2022-11-08 | [Calling nim from python](content/calling_nim_from_python.ipynb)                                                         |
 | 2022-10-30 | [An effective priority jobqueue using `insort` and `deque`](content/effective_job_queue.ipynb)                           |
 | 2022-10-24 | [Writing documentation with JupyterBook - Easy!](content/writing_documentation.ipynb)                                    |
@@ -17,6 +17,7 @@ Got a question? Just raise an issue.
 | 2022-08-21 | [Comparing syntax of pandas vs tablite](content/readability_matters_pandas_vs_tablite.ipynb)                             |
 | 2022-08-18 | [rounding the better way 2.0 (rounding numbers and dates)](content/rounding_the_better_way.ipynb)                        |
 | 2022-07-19 | [measuring speed to disk](content/measuring_write_out_speed.ipynb)                                                       |
+| 2022-07-19 | [Organising code for python projects, packaging and testing packages](content/code_organisation.ipynb)                   |
 | 2022-04-30 | [`del`, `__del__` and garbage collection](content/del_and_gc.ipynb)                                                      |
 | 2022-04-13 | [Multiprocessing with shared memory - part 2](content/multiprocessing_w_shared_memory2.ipynb)                            |
 | 2022-03-14 | [Detecting the intersection of range objects](content/comparing_ranges.ipynb)                                            |
