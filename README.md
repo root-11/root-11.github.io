@@ -51,5 +51,5 @@ Got a question? Just raise an issue.
 | 2020-05-07 | [Automatic test generation](content/automatic_test_generation.ipynb)                                                     |
 | 2020-05-06 | [Maslite](content/maslite.ipynb)                                                                                         |
 | 2020-05-05 | [Monty Hall simulation](content/monty_hall_simulation.ipynb)                                                             |
-| 2020-05-04 | [Jupyter notebook notes on probabilities](content/notes_on_probabilities.ipynb)                                          |
+| 2020-05-04 | [Basic combinatorics](content/basic_combinatorics.ipynb)                                                                 |
 
