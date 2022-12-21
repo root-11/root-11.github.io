@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------- |
+| 2022-12-20 | [The fastest alarm clock (or sortation in practice)](content/fastest_sortation_for_practical_purpose.ipynb)              |
 | 2022-12-20 | [Controlling python at exit](content/python_at_exit.ipynb)                                                               |
 | 2022-11-08 | [Calling nim from python](content/calling_nim_from_python.ipynb)                                                         |
 | 2022-10-30 | [An effective priority jobqueue using `insort` and `deque`](content/effective_job_queue.ipynb)                           |
