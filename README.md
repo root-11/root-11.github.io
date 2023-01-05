@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------- |
+| 2023-01-05 | [Scheduling: Is it worth the effort? (Yes!)](content/../tsp_random_vs_optimal.ipynb)                                     |
 | 2022-12-26 | [A dummy file system for apps using key-value store](content/a_dummy_filesystem_for_kv_store.ipynb)                      |
 | 2022-12-20 | [The fastest alarm clock (or sortation in practice)](content/fastest_sortation_for_practical_purpose.ipynb)              |
 | 2022-12-20 | [Controlling python at exit](content/python_at_exit.ipynb)                                                               |
