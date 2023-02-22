@@ -9,7 +9,9 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------- |
-| 2023-02-05 | [solving the knapsack problem in 3 ways](content/knapsack_problem.ipynb)                                          |
+| 2023-02-22 | [What are convolutions?](content/what_are_convolutions.ipynb)                                                            |
+| 2023-02-18 | [Math for Operations Research](content/math_for_or.md)                                                                   |
+| 2023-02-05 | [solving the knapsack problem in 3 ways](content/knapsack_problem.ipynb)                                                 |
 | 2023-01-05 | [Notes on basic stochastic optimization](content/stochastic_optimization.ipynb)                                          |
 | 2023-01-05 | [Scheduling: Is it worth the effort? (Yes!)](content/tsp_random_vs_optimal.ipynb)                                        |
 | 2022-12-26 | [A dummy file system for apps using key-value store](content/a_dummy_filesystem_for_kv_store.ipynb)                      |
