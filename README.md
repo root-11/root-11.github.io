@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                  |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------- |
+| 2023-05-20 | [Validated DataFrames for Pandas for free?](content/validated_dataframe.ipynb)                                           |
 | 2023-02-22 | [What are convolutions?](content/what_are_convolutions.ipynb)                                                            |
 | 2023-02-18 | [Math for Operations Research](content/math_for_or.md)                                                                   |
 | 2023-02-05 | [solving the knapsack problem in 3 ways](content/knapsack_problem.ipynb)                                                 |
