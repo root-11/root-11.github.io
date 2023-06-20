@@ -14,7 +14,7 @@ Got a question? Just raise an issue.
 | 2023-05-23 | [Grahps 2 - Generating and visualizing graphs](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/generating%20and%20visualising%20graphs.ipynb)                        |
 | 2023-05-23 | [Graphs 1 - Basic graph theory](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/basic%20graph%20theory.ipynb)                                                        |
 | 2023-05-20 | [Validated DataFrames for Pandas for free?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/validated_dataframe.ipynb)                                           |
-| 2023-04-05 | [Tablite: The mega-tutorial for out-of-memory datasets)](https://nbviewer.org/github/root-11/tablite/blob/master/tutorial.ipynb)                                                           |
+| 2023-04-05 | [Tablite: The mega-tutorial for out-of-memory datasets](https://nbviewer.org/github/root-11/tablite/blob/master/tutorial.ipynb)                                                           |
 | 2023-02-22 | [What are convolutions?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/what_are_convolutions.ipynb)                                                            |
 | 2023-02-18 | [Math for Operations Research](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/math_for_OR.ipynb)                                                                |
 | 2023-02-05 | [solving the knapsack problem in 3 ways](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/knapsack_problem.ipynb)                                                 |
