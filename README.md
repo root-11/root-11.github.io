@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                                                                                    |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2023-07-30 | [Reading .npy files with np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                               |
 | 2023-07-17 | [Classes as global configuration templates](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/classes_as_configs.ipynb)                                            |
 | 2023-05-23 | [Graphs 4 - solving search problems](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/solving%20search%20problems.ipynb)                                              |
 | 2023-05-23 | [Graphs 3 - as finite state machines (and how to solve sudokus)](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/graphs%20as%20finite%20state%20machines.ipynb)      |
