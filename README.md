@@ -9,7 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                                                                                    |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2023-07-30 | [Reading .npy files without np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                               |
+| 2023-07-30 | [Reading .npy files without np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                            |
 | 2023-07-17 | [Classes as global configuration templates](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/classes_as_configs.ipynb)                                            |
 | 2023-05-23 | [Graphs 4 - solving search problems](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/solving%20search%20problems.ipynb)                                              |
 | 2023-05-23 | [Graphs 3 - as finite state machines (and how to solve sudokus)](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/graphs%20as%20finite%20state%20machines.ipynb)      |
@@ -58,6 +58,7 @@ Got a question? Just raise an issue.
 | 2020-06-05 | [Notes on optimisation strategies](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/notes_on_optimization_strategies.ipynb)                                       |
 | 2020-05-31 | [Graph-theory - a reference implementation](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/graph-theory.ipynb)                                                  |
 | 2020-05-28 | [Problem structure keywords and content (or how to solve any problem)](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/problem_structure_keyword_contents.ipynb) |
+| 2020-05-25 | [Basic geometry](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/basic_geometry.ipynb)                                                                           |
 | 2020-05-23 | [Calculating the convex hull](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/convex_hull.ipynb)                                                                 |
 | 2020-05-19 | [Rounding datetime, dates and times](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/rounding_date_and_times.ipynb)                                              |
 | 2020-05-18 | [Safely parse arguments to pythons <code>eval</code>](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/safe_eval.ipynb)                                           |
