@@ -9,6 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                                                                                    |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2023-10-25 | [nth product](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/nth_product.ipynb)                                                                                 |
 | 2023-09-06 | [Maximum delayed commitment - an agile strategy](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/agile_and_organisations.ipynb)                                  |
 | 2023-09-05 | [cost of python datastructures](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/cost_of_pythons_datastructures.ipynb)                                            |
 | 2023-07-30 | [Reading .npy files without np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                            |
