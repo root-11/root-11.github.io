@@ -1,6 +1,9 @@
 # Project Proposal: Lightweight Containerization with Microkernel Approach Using Nim
 
-This document explores the innovative concept of leveraging microkernel architecture for efficient and isolated execution of tasks, particularly in high-performance computing and microservices environments. It outlines the design and functionality of a lightweight microkernel containerization solution, emphasizing its simplicity, resource efficiency, and scalability. Through examples and technical explanations, the document demonstrates how microkernels can host a multitude of services on minimal infrastructure, addressing challenges like rapid resource allocation, security, and system monitoring. This approach presents a paradigm shift towards more dynamic, modular, and efficient computing infrastructures.
+**Executive summary** - This document explores the innovative concept of leveraging microkernel architecture for efficient and isolated execution of tasks, particularly in high-performance computing and microservices environments. It outlines the design and functionality of a lightweight microkernel containerization solution, emphasizing its simplicity, resource efficiency, and scalability. Through examples and technical explanations, the document demonstrates how microkernels can host a multitude of services on minimal infrastructure, addressing challenges like rapid resource allocation, security, and system monitoring. This approach presents a paradigm shift towards more dynamic, modular, and efficient computing infrastructures.
+
+
+> Overall, the document does a commendable job of articulating the innovative use of microkernels in various computing environments, particularly in high-performance computing and microservices, and how this approach could lead to more efficient, scalable, and resource-conscious computing solutions.
 
 
 ## Table of Contents
