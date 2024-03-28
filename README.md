@@ -6,15 +6,14 @@ Github will render the notebooks for you.
 
 Got a question? Just raise an issue.
 
-
-| date       | article                                                                                                                                                                                    |
-| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2024-02-28 | [Renting or buying? A view on the UK house market](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/renting_or_buying.ipynb)                                      |
-| 2023-10-27 | [Is deepcopy a good idea?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_deepcopy_a_good_idea.ipynb)                                                        |
-| 2023-10-25 | [The n<sup>th</sup> product](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/nth_product.ipynb)                                                                                 |
-| 2023-09-06 | [Maximum delayed commitment - an agile strategy](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/agile_and_organisations.ipynb)                                  |
-| 2023-09-05 | [The cost of python datastructures](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/cost_of_pythons_datastructures.ipynb)                                            |
-| 2023-07-30 | [Reading .npy files without np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                            |
+| date       | article                                                                                                                                                                     |
+| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2024-02-28 | [Renting or buying? A view on the UK house market][nbviewer-root11]/renting_or_buying.ipynb                                                                                 |
+| 2023-10-27 | [Is deepcopy a good idea?][nbviewer-root11]/is_deepcopy_a_good_idea.ipynb                                                                                                   |
+| 2023-10-25 | [The n<sup>th</sup> product][nbviewer-root11]/nth_product.ipynb                                                                                                  |
+| 2023-09-06 | [Maximum delayed commitment - an agile strategy][nbviewer-root11]/agile_and_organisations.ipynb                                                                             |
+| 2023-09-05 | [The cost of python datastructures][nbviewer-root11]/cost_of_pythons_datastructures.ipynb                                                                                   |
+| 2023-07-30 | [Reading .npy files without np.load][nbviewer-root11]/reading_numpys_fileformat.ipynb                                                                                        |
 | 2023-07-17 | [Classes as global configuration templates](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/classes_as_configs.ipynb)                                            |
 | 2023-05-23 | [Graphs 4 - solving search problems](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/solving%20search%20problems.ipynb)                                              |
 | 2023-05-23 | [Graphs 3 - as finite state machines (and how to solve sudokus)](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/graphs%20as%20finite%20state%20machines.ipynb)      |
@@ -75,3 +74,4 @@ Got a question? Just raise an issue.
 | 2020-05-05 | [Monty Hall simulation](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/monty_hall_simulation.ipynb)                                                             |
 | 2020-05-04 | [Basic combinatorics](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/basic_combinatorics.ipynb)                                                                 |
 
+[nbviewer-root11]: https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content
