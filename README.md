@@ -9,7 +9,7 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                                                                                    |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2024-02-28 | [Renting or buying? A view on the UK house market]([nbviewer-root11]/renting_or_buying.ipynb)                                      |
+| 2024-02-28 | [Renting or buying? A view on the UK house market](nbviewer-root11/renting_or_buying.ipynb)                                      |
 | 2023-10-27 | [Is deepcopy a good idea?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_deepcopy_a_good_idea.ipynb)                                                        |
 | 2023-10-25 | [nth product](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/nth_product.ipynb)                                                                                 |
 | 2023-09-06 | [Maximum delayed commitment - an agile strategy](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/agile_and_organisations.ipynb)                                  |
