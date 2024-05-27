@@ -9,11 +9,12 @@ Got a question? Just raise an issue.
 
 | date       | article                                                                                                                                                                                    |
 | :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2024-05-27 | [An introduction to optimization with matrices](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/introduction_to_jacobian_matrices.ipynb)                         |
 | 2024-02-28 | [Renting or buying? A view on the UK house market](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/renting_or_buying.ipynb)                                      |
 | 2023-10-27 | [Is deepcopy a good idea?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_deepcopy_a_good_idea.ipynb)                                                        |
-| 2023-10-25 | [The n<sup>th</sup> product](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/nth_product.ipynb)                                                                                 |
+| 2023-10-25 | [The n<sup>th</sup> product](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/nth_product.ipynb)                                                                  |
 | 2023-09-06 | [Maximum delayed commitment - an agile strategy](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/agile_and_organisations.ipynb)                                  |
-| 2023-09-05 | [The cost of python datastructures](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/cost_of_pythons_datastructures.ipynb)                                            |
+| 2023-09-05 | [The cost of python datastructures](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/cost_of_pythons_datastructures.ipynb)                                        |
 | 2023-07-30 | [Reading .npy files without np.load](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/reading_numpys_fileformat.ipynb)                                            |
 | 2023-07-17 | [Classes as global configuration templates](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/classes_as_configs.ipynb)                                            |
 | 2023-05-23 | [Graphs 4 - solving search problems](https://nbviewer.org/github/root-11/graph-theory/blob/master/examples/solving%20search%20problems.ipynb)                                              |
@@ -58,7 +59,7 @@ Got a question? Just raise an issue.
 | 2021-06-14 | [How many digits do you need?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/how_many_digits_do_you_need.ipynb)                                                |
 | 2021-04-12 | [Stock cutting problem](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/stock_cutting.ipynb)                                                                     |
 | 2021-01-22 | [Integer ratios](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/integer_ratios.ipynb)                                                                           |
-| 2021-01-15 | [When is `numpy` really faster?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_numpy_always_faster.ipynb)                                                          |
+| 2021-01-15 | [When is `numpy` really faster?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_numpy_always_faster.ipynb)                                                   |
 | 2020-06-27 | [Tablite - a dirty data tool](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/tablite.ipynb)                                                                     |
 | 2020-06-05 | [Notes on optimisation strategies](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/notes_on_optimization_strategies.ipynb)                                       |
 | 2020-05-31 | [Graph-theory - a reference implementation](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/graph-theory.ipynb)                                                  |
