@@ -60,6 +60,7 @@ Got a question? Just raise an issue.
 | 2021-04-12 | [Stock cutting problem](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/stock_cutting.ipynb)                                                                     |
 | 2021-01-22 | [Integer ratios](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/integer_ratios.ipynb)                                                                           |
 | 2021-01-15 | [When is `numpy` really faster?](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/is_numpy_always_faster.ipynb)                                                   |
+| 2020-11-07 | [Import error - how to fix relative imports](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/realtive_imports.ipynb)                                             |
 | 2020-06-27 | [Tablite - a dirty data tool](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/tablite.ipynb)                                                                     |
 | 2020-06-05 | [Notes on optimisation strategies](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/notes_on_optimization_strategies.ipynb)                                       |
 | 2020-05-31 | [Graph-theory - a reference implementation](https://nbviewer.org/github/root-11/root-11.github.io/blob/master/content/graph-theory.ipynb)                                                  |
